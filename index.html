@@ -1,13 +1,10 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>PoPo</title>
-  <!-- Tailwind CSS CDN -->
+  <title>PoPo - Solo & VS AI</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <!-- Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&display=swap" rel="stylesheet">
@@ -21,22 +18,17 @@
       background: radial-gradient(circle at center, #1e1b4b 0%, #0f172a 100%);
       overflow: hidden;
     }
-    
     html, body {
       margin: 0;
       padding: 0;
       width: 100%;
       height: 100%;
     }
-
-    /* Grid layout styling */
     .board-grid {
       display: grid;
       grid-template-columns: repeat(8, minmax(0, 1fr));
       grid-template-rows: repeat(8, minmax(0, 1fr));
     }
-
-    /* Keyframe animations */
     @keyframes popIn {
       0% { transform: scale(0.8); opacity: 0; }
       100% { transform: scale(1); opacity: 1; }
@@ -44,7 +36,6 @@
     .animate-pop {
       animation: popIn 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
     }
-
     @keyframes pulseGlow {
       0%, 100% { box-shadow: 0 0 4px rgba(168, 85, 247, 0.4); }
       50% { box-shadow: 0 0 16px rgba(168, 85, 247, 0.8); }
@@ -52,8 +43,6 @@
     .pulse-glow {
       animation: pulseGlow 1.5s infinite;
     }
-
-    /* Shake Screen class dynamic animation */
     .shake {
       animation: shakeAnim 0.2s cubic-bezier(.36,.07,.19,.97) both;
       transform: translate3d(0, 0, 0);
@@ -64,8 +53,6 @@
       30%, 50%, 70% { transform: translate3d(-6px, 0, 0); }
       40%, 60% { transform: translate3d(6px, 0, 0); }
     }
-
-    /* Sparkle particle overlay */
     #particles-canvas {
       position: absolute;
       top: 0;
@@ -75,95 +62,206 @@
       pointer-events: none;
       z-index: 30;
     }
-
-    /* Soft shadow style for dragging */
     .dragging-preview {
       opacity: 0.95;
       transform: scale(1.02);
       box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.7), 0 8px 10px -6px rgb(0 0 0 / 0.7);
     }
+    .mode-btn {
+      transition: all 0.2s ease;
+    }
+    .mode-btn:hover {
+      transform: scale(1.03);
+    }
+    .mode-btn:active {
+      transform: scale(0.97);
+    }
+    .vs-board-container {
+      display: grid;
+      grid-template-columns: 1.2fr 0.8fr;
+      gap: 6px;
+      max-width: 520px;
+      width: 100%;
+    }
+    .vs-board-wrapper {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+    }
+    .vs-board-wrapper .board-grid {
+      width: 100%;
+      aspect-ratio: 1;
+    }
+    /* Scale down AI board visually (right side) */
+    #vs-ui .vs-board-wrapper:last-child {
+      transform: scale(0.82);
+      transform-origin: top center;
+      margin-bottom: -12px;
+    }
+    .vs-tray {
+      min-height: 56px;
+    }
+    .ai-thinking {
+      animation: pulseThink 1s infinite;
+    }
+    @keyframes pulseThink {
+      0%, 100% { opacity: 0.6; }
+      50% { opacity: 1; }
+    }
+    /* Scrollable board container for VS mode on small screens */
+    .vs-scroll {
+      max-height: 100vh;
+      overflow-y: auto;
+    }
+    .vs-scroll::-webkit-scrollbar {
+      width: 4px;
+    }
+    .vs-scroll::-webkit-scrollbar-thumb {
+      background: #334155;
+      border-radius: 2px;
+    }
   </style>
 </head>
-<body class="flex flex-col items-center justify-start min-h-screen text-white p-3 md:p-6 overflow-hidden gap-3">
+<body class="flex flex-col items-center justify-start min-h-screen text-white p-2 md:p-4 overflow-hidden gap-2">
 
-  <!-- Particle canvas for explosion effects -->
   <canvas id="particles-canvas"></canvas>
 
-  <!-- Centered Main Content Wrapper -->
-  <div class="w-full max-w-sm flex flex-col items-center gap-3 mt-1 z-10">
-    
-    <!-- Header Section with stats -->
+  <!-- ======================== MODE SELECTION SCREEN ======================== -->
+  <div id="mode-screen" class="flex flex-col items-center justify-center w-full max-w-sm min-h-screen gap-6 z-20">
+    <div class="text-center space-y-2">
+      <span class="text-6xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-cyan-400 via-indigo-400 to-purple-400">POPO</span>
+      <p class="text-slate-400 text-sm">Block Puzzle Challenge</p>
+    </div>
+    <div class="flex flex-col gap-4 w-full px-6">
+      <button id="btn-solo" class="mode-btn w-full bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white font-bold py-4 px-6 rounded-xl shadow-lg shadow-indigo-500/20 text-lg tracking-wide">
+        🎮 SOLO MODE
+      </button>
+      <button id="btn-vs-ai" class="mode-btn w-full bg-gradient-to-r from-amber-500 to-rose-600 hover:from-amber-600 hover:to-rose-700 text-white font-bold py-4 px-6 rounded-xl shadow-lg shadow-amber-500/20 text-lg tracking-wide">
+        🤖 VS AI MODE
+      </button>
+    </div>
+    <div class="text-slate-500 text-xs text-center px-6 mt-2">
+      <p>In VS AI, you and the AI take turns placing shapes.<br>The last player with valid moves wins!</p>
+    </div>
+  </div>
+
+  <!-- ======================== SOLO MODE UI ======================== -->
+  <div id="solo-ui" class="hidden w-full max-w-sm flex flex-col items-center gap-2 mt-1 z-10">
     <header class="w-full flex flex-col items-center gap-1.5">
       <div class="flex justify-between items-center w-full px-1">
         <div class="flex items-center gap-2">
-          <span class="text-3xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-cyan-400 via-indigo-400 to-purple-400">POPO</span>
-          <span id="rescue-pill" class="hidden text-[10px] bg-red-500/80 border border-red-400 text-white px-2 py-0.5 rounded-full font-bold animate-pulse">RESCUE ON</span>
+          <button id="solo-back" class="text-slate-400 hover:text-white text-lg transition-colors">←</button>
+          <span class="text-2xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-cyan-400 via-indigo-400 to-purple-400">SOLO</span>
+          <span id="solo-rescue-pill" class="hidden text-[10px] bg-red-500/80 border border-red-400 text-white px-2 py-0.5 rounded-full font-bold animate-pulse">RESCUE ON</span>
         </div>
-        <button id="audio-toggle" class="px-2 py-1 bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700 rounded-full transition-all text-[11px] flex items-center justify-center gap-1">
+        <button id="solo-audio-toggle" class="px-2 py-1 bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700 rounded-full transition-all text-[11px] flex items-center justify-center gap-1">
           🔊 Sound On
         </button>
       </div>
-
-      <!-- Scoreboards -->
       <div class="grid grid-cols-3 gap-2 w-full">
         <div class="bg-slate-900/60 border border-slate-800 backdrop-blur-md rounded-xl p-1.5 text-center flex flex-col justify-center">
           <span class="text-slate-400 text-[9px] font-semibold uppercase tracking-wider">Score</span>
-          <span id="score-display" class="text-lg font-extrabold text-cyan-300">0</span>
+          <span id="solo-score" class="text-lg font-extrabold text-cyan-300">0</span>
         </div>
-        
         <div class="bg-slate-900/60 border border-slate-800 backdrop-blur-md rounded-xl p-1.5 text-center flex flex-col justify-center relative overflow-hidden">
           <span class="text-slate-400 text-[9px] font-semibold uppercase tracking-wider">Combo</span>
-          <span id="combo-display" class="text-lg font-extrabold text-amber-400">x1</span>
-          <div id="combo-bar" class="absolute bottom-0 left-0 h-0.5 bg-amber-500 transition-all duration-300" style="width: 0%"></div>
+          <span id="solo-combo" class="text-lg font-extrabold text-amber-400">x1</span>
+          <div id="solo-combo-bar" class="absolute bottom-0 left-0 h-0.5 bg-amber-500 transition-all duration-300" style="width: 0%"></div>
         </div>
-
         <div class="bg-slate-900/60 border border-slate-800 backdrop-blur-md rounded-xl p-1.5 text-center flex flex-col justify-center">
           <span class="text-slate-400 text-[9px] font-semibold uppercase tracking-wider">Best</span>
-          <span id="high-score-display" class="text-lg font-extrabold text-purple-400">0</span>
+          <span id="solo-high" class="text-lg font-extrabold text-purple-400">0</span>
         </div>
       </div>
     </header>
-
-    <!-- Selection Tray -->
     <section class="w-full">
-      <div class="bg-slate-900/40 border border-slate-800/50 backdrop-blur-lg rounded-2xl p-2 w-full flex justify-around items-center min-h-[96px] gap-2 shadow-inner">
-        <!-- 3 pieces placeholders -->
-        <div id="piece-slot-0" class="flex items-center justify-center w-20 h-20 relative"></div>
-        <div id="piece-slot-1" class="flex items-center justify-center w-20 h-20 relative"></div>
-        <div id="piece-slot-2" class="flex items-center justify-center w-20 h-20 relative"></div>
+      <div id="solo-tray" class="bg-slate-900/40 border border-slate-800/50 backdrop-blur-lg rounded-2xl p-2 w-full flex justify-around items-center min-h-[76px] gap-2 shadow-inner">
+        <div id="solo-slot-0" class="flex items-center justify-center w-16 h-16 relative"></div>
+        <div id="solo-slot-1" class="flex items-center justify-center w-16 h-16 relative"></div>
+        <div id="solo-slot-2" class="flex items-center justify-center w-16 h-16 relative"></div>
       </div>
     </section>
-
-    <!-- Main Game Board Container -->
     <main class="w-full flex flex-col items-center justify-center">
-      <div id="board-container" class="relative w-full max-w-[320px] aspect-square bg-slate-950/80 border-4 border-slate-800/80 rounded-2xl p-1.5 shadow-2xl transition-all duration-150">
-        <div id="game-board" class="board-grid w-full h-full gap-1">
-          <!-- 64 cells populated dynamically via javascript -->
+      <div id="solo-board-container" class="relative w-full max-w-[280px] aspect-square bg-slate-950/80 border-4 border-slate-800/80 rounded-2xl p-1.5 shadow-2xl transition-all duration-150">
+        <div id="solo-board" class="board-grid w-full h-full gap-1">
+          <!-- 64 cells -->
         </div>
       </div>
     </main>
-
-    <!-- Interactive Help / Tip Info -->
-    <div class="text-center mt-1">
-      <p id="tip-text" class="text-slate-400 text-[10px] font-medium tracking-wide">Drag shapes from the top tray onto the board!</p>
+    <div class="text-center mt-0">
+      <p id="solo-tip" class="text-slate-400 text-[10px] font-medium">Drag shapes from the top tray onto the board!</p>
     </div>
-
   </div>
 
-  <!-- Intentionally Left Clean & Empty Bottom Area to Fit Seamlessly in Previews -->
-  <div class="flex-grow"></div>
+  <!-- ======================== VS AI MODE UI ======================== -->
+  <div id="vs-ui" class="hidden w-full max-w-md flex flex-col items-center gap-1 z-10 vs-scroll" style="max-height: 100dvh;">
+    <!-- VS Header -->
+    <header class="w-full flex justify-between items-center px-1">
+      <button id="vs-back" class="text-slate-400 hover:text-white text-lg transition-colors">←</button>
+      <div class="flex items-center gap-2">
+        <span class="text-xl font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-amber-400 to-rose-500">VS AI</span>
+        <span id="vs-turn-indicator" class="text-[11px] bg-slate-700/60 px-2 py-0.5 rounded-full font-bold">Your Turn</span>
+      </div>
+      <button id="vs-audio-toggle" class="px-2 py-1 bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700 rounded-full transition-all text-[11px] flex items-center justify-center gap-1">
+        🔊 Sound On
+      </button>
+    </header>
 
-  <!-- Dragging Virtual Overlay -->
+    <!-- Two boards side by side -->
+    <div class="vs-board-container w-full">
+      <!-- Player Board (LEFT, BIGGER) -->
+      <div class="vs-board-wrapper">
+        <div class="flex items-center gap-1">
+          <span class="text-[10px] text-slate-400 font-semibold">🧑 You</span>
+          <span id="vs-player-score" class="text-xs font-bold text-cyan-300">0</span>
+        </div>
+        <div id="vs-player-board-container" class="relative w-full aspect-square bg-slate-950/80 border-2 border-slate-700/80 rounded-xl p-1 shadow-lg">
+          <div id="vs-player-board" class="board-grid w-full h-full gap-0.5"></div>
+        </div>
+        <!-- Player Tray -->
+        <div id="vs-player-tray" class="bg-slate-900/40 border border-slate-800/50 rounded-xl p-1 w-full flex justify-around items-center min-h-[44px] gap-1 shadow-inner">
+          <div id="vs-player-slot-0" class="flex items-center justify-center w-10 h-10 relative"></div>
+          <div id="vs-player-slot-1" class="flex items-center justify-center w-10 h-10 relative"></div>
+          <div id="vs-player-slot-2" class="flex items-center justify-center w-10 h-10 relative"></div>
+        </div>
+      </div>
+
+      <!-- AI Board (RIGHT, SMALLER) -->
+      <div class="vs-board-wrapper">
+        <div class="flex items-center gap-1">
+          <span class="text-[10px] text-slate-400 font-semibold">&#129302; AI</span>
+          <span id="vs-ai-score" class="text-xs font-bold text-rose-400">0</span>
+        </div>
+        <div id="vs-ai-board-container" class="relative w-full aspect-square bg-slate-950/80 border-2 border-slate-700/80 rounded-xl p-1 shadow-lg">
+          <div id="vs-ai-board" class="board-grid w-full h-full gap-0.5"></div>
+        </div>
+        <!-- AI Tray (smaller) -->
+        <div id="vs-ai-tray" class="bg-slate-900/40 border border-slate-800/50 rounded-xl p-1 w-full flex justify-around items-center min-h-[44px] gap-1 shadow-inner">
+          <div id="vs-ai-slot-0" class="flex items-center justify-center w-10 h-10 relative"></div>
+          <div id="vs-ai-slot-1" class="flex items-center justify-center w-10 h-10 relative"></div>
+          <div id="vs-ai-slot-2" class="flex items-center justify-center w-10 h-10 relative"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- VS Tip -->
+    <div class="text-center mt-0">
+      <p id="vs-tip" class="text-slate-400 text-[9px] font-medium">Place a shape, then the AI takes its turn!</p>
+    </div>
+  </div>
+
+  <!-- Drag Ghost -->
   <div id="drag-ghost" class="fixed pointer-events-none z-50 hidden transition-transform duration-75 origin-center"></div>
 
-  <!-- Game Over Screen Modal -->
+  <!-- Game Over Modal (shared) -->
   <div id="game-over-modal" class="fixed inset-0 bg-slate-950/95 backdrop-blur-md flex flex-col items-center justify-center p-6 z-40 hidden opacity-0 transition-opacity duration-300">
-    <div class="max-w-xs w-full text-center space-y-5 animate-pop">
-      <div class="w-16 h-16 bg-red-500/10 border-2 border-red-500/30 text-red-500 rounded-full flex items-center justify-center mx-auto mb-1 text-2xl">
+    <div class="max-w-xs w-full text-center space-y-4 animate-pop">
+      <div id="modal-icon" class="w-16 h-16 bg-red-500/10 border-2 border-red-500/30 text-red-500 rounded-full flex items-center justify-center mx-auto mb-1 text-2xl">
         💀
       </div>
-      <h2 class="text-3xl font-extrabold tracking-tight bg-gradient-to-b from-white to-slate-400 bg-clip-text text-transparent">NO MOVES</h2>
-      <p class="text-slate-400 text-xs">The grid is too cluttered and none of your shapes fit.</p>
+      <h2 id="modal-title" class="text-3xl font-extrabold tracking-tight bg-gradient-to-b from-white to-slate-400 bg-clip-text text-transparent">NO MOVES</h2>
+      <p id="modal-desc" class="text-slate-400 text-xs">The grid is too cluttered and none of your shapes fit.</p>
       
       <div class="bg-slate-900/60 border border-slate-800 p-3 rounded-xl space-y-2">
         <div class="flex justify-between items-center text-xs">
@@ -176,117 +274,154 @@
         </div>
       </div>
 
-      <button id="btn-restart" class="w-full bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white font-bold py-3 px-6 rounded-xl shadow-lg shadow-indigo-500/20 active:scale-95 transition-all text-sm tracking-wide">
-        TRY AGAIN
-      </button>
+      <div class="flex flex-col gap-2">
+        <button id="modal-retry" class="w-full bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white font-bold py-3 px-6 rounded-xl shadow-lg shadow-indigo-500/20 active:scale-95 transition-all text-sm tracking-wide">
+          TRY AGAIN
+        </button>
+        <button id="modal-menu" class="w-full bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold py-2 px-6 rounded-xl border border-slate-700 active:scale-95 transition-all text-sm">
+          MAIN MENU
+        </button>
+      </div>
     </div>
   </div>
 
-  <!-- JS Implementation -->
+  <!-- VS Result Modal -->
+  <div id="vs-result-modal" class="fixed inset-0 bg-slate-950/95 backdrop-blur-md flex flex-col items-center justify-center p-6 z-40 hidden opacity-0 transition-opacity duration-300">
+    <div class="max-w-xs w-full text-center space-y-4 animate-pop">
+      <div id="vs-result-icon" class="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-1 text-2xl"></div>
+      <h2 id="vs-result-title" class="text-3xl font-extrabold tracking-tight bg-gradient-to-b from-white to-slate-400 bg-clip-text text-transparent">GAME OVER</h2>
+      <p id="vs-result-desc" class="text-slate-400 text-xs"></p>
+      
+      <div class="bg-slate-900/60 border border-slate-800 p-3 rounded-xl space-y-2">
+        <div class="flex justify-between items-center text-xs">
+          <span class="text-slate-400">🧑 Your Score</span>
+          <span id="vs-result-player" class="text-lg font-bold text-cyan-300">0</span>
+        </div>
+        <div class="flex justify-between items-center text-xs border-t border-slate-800 pt-2">
+          <span class="text-slate-400">🤖 AI Score</span>
+          <span id="vs-result-ai" class="text-lg font-bold text-rose-400">0</span>
+        </div>
+      </div>
+
+      <div class="flex flex-col gap-2">
+        <button id="vs-result-retry" class="w-full bg-gradient-to-r from-amber-500 to-rose-600 hover:from-amber-600 hover:to-rose-700 text-white font-bold py-3 px-6 rounded-xl shadow-lg shadow-amber-500/20 active:scale-95 transition-all text-sm tracking-wide">
+          PLAY AGAIN
+        </button>
+        <button id="vs-result-menu" class="w-full bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold py-2 px-6 rounded-xl border border-slate-700 active:scale-95 transition-all text-sm">
+          MAIN MENU
+        </button>
+      </div>
+    </div>
+  </div>
+
   <script>
-    // --- AUDIO SYSTEM (Web Audio API Synthesizer) ---
+    // ========================================================================
+    // AUDIO
+    // ========================================================================
     class SoundController {
       constructor() {
         this.ctx = null;
         this.muted = false;
       }
-      
       init() {
         if (!this.ctx) {
           this.ctx = new (window.AudioContext || window.webkitAudioContext)();
         }
       }
-
       playPlace() {
         if (this.muted) return;
         this.init();
         const osc = this.ctx.createOscillator();
         const gain = this.ctx.createGain();
-        osc.connect(gain);
-        gain.connect(this.ctx.destination);
-
+        osc.connect(gain); gain.connect(this.ctx.destination);
         osc.type = 'sine';
         osc.frequency.setValueAtTime(300, this.ctx.currentTime);
         osc.frequency.exponentialRampToValueAtTime(150, this.ctx.currentTime + 0.15);
-
         gain.gain.setValueAtTime(0.15, this.ctx.currentTime);
         gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.15);
-
-        osc.start();
-        osc.stop(this.ctx.currentTime + 0.15);
+        osc.start(); osc.stop(this.ctx.currentTime + 0.15);
       }
-
       playClear(comboCount = 1) {
         if (this.muted) return;
         this.init();
         const now = this.ctx.currentTime;
-        const noteCount = comboCount;
-        
-        for (let i = 0; i < noteCount; i++) {
+        for (let i = 0; i < comboCount; i++) {
           const osc = this.ctx.createOscillator();
           const gain = this.ctx.createGain();
-          osc.connect(gain);
-          gain.connect(this.ctx.destination);
-
+          osc.connect(gain); gain.connect(this.ctx.destination);
           osc.type = 'triangle';
-          const baseFreq = 261.63; // C4
-          const intervals = [1, 1.25, 1.5, 1.875, 2]; // Major scale pitches
+          const baseFreq = 261.63;
+          const intervals = [1, 1.25, 1.5, 1.875, 2];
           const pitchFactor = intervals[Math.min(i, intervals.length - 1)];
           const targetFreq = baseFreq * pitchFactor;
-
           osc.frequency.setValueAtTime(targetFreq, now + (i * 0.08));
           osc.frequency.exponentialRampToValueAtTime(targetFreq * 2, now + (i * 0.08) + 0.25);
-
           gain.gain.setValueAtTime(0.12, now + (i * 0.08));
           gain.gain.exponentialRampToValueAtTime(0.01, now + (i * 0.08) + 0.3);
-
           osc.start(now + (i * 0.08));
           osc.stop(now + (i * 0.08) + 0.3);
         }
       }
-
       playComboMax() {
         if (this.muted) return;
         this.init();
         const osc = this.ctx.createOscillator();
         const gain = this.ctx.createGain();
-        osc.connect(gain);
-        gain.connect(this.ctx.destination);
-
+        osc.connect(gain); gain.connect(this.ctx.destination);
         osc.type = 'sawtooth';
         osc.frequency.setValueAtTime(180, this.ctx.currentTime);
         osc.frequency.exponentialRampToValueAtTime(880, this.ctx.currentTime + 0.45);
-
         gain.gain.setValueAtTime(0.1, this.ctx.currentTime);
         gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.45);
-
-        osc.start();
-        osc.stop(this.ctx.currentTime + 0.45);
+        osc.start(); osc.stop(this.ctx.currentTime + 0.45);
       }
-
       playGameOver() {
         if (this.muted) return;
         this.init();
         const osc = this.ctx.createOscillator();
         const gain = this.ctx.createGain();
-        osc.connect(gain);
-        gain.connect(this.ctx.destination);
-
+        osc.connect(gain); gain.connect(this.ctx.destination);
         osc.type = 'triangle';
         osc.frequency.setValueAtTime(220, this.ctx.currentTime);
         osc.frequency.linearRampToValueAtTime(80, this.ctx.currentTime + 0.8);
-
         gain.gain.setValueAtTime(0.2, this.ctx.currentTime);
         gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.8);
-
-        osc.start();
-        osc.stop(this.ctx.currentTime + 0.8);
+        osc.start(); osc.stop(this.ctx.currentTime + 0.8);
+      }
+      playWin() {
+        if (this.muted) return;
+        this.init();
+        const now = this.ctx.currentTime;
+        [523.25, 659.25, 783.99, 1046.5].forEach((freq, i) => {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.connect(gain); gain.connect(this.ctx.destination);
+          osc.type = 'square';
+          osc.frequency.setValueAtTime(freq, now + i * 0.12);
+          gain.gain.setValueAtTime(0.08, now + i * 0.12);
+          gain.gain.exponentialRampToValueAtTime(0.01, now + i * 0.12 + 0.25);
+          osc.start(now + i * 0.12); osc.stop(now + i * 0.12 + 0.25);
+        });
+      }
+      playLose() {
+        if (this.muted) return;
+        this.init();
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.connect(gain); gain.connect(this.ctx.destination);
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(400, this.ctx.currentTime);
+        osc.frequency.linearRampToValueAtTime(100, this.ctx.currentTime + 0.6);
+        gain.gain.setValueAtTime(0.1, this.ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.6);
+        osc.start(); osc.stop(this.ctx.currentTime + 0.6);
       }
     }
-
     const sfx = new SoundController();
 
-    // --- GAME SHAPES DEFINITIONS & COLOR SYSTEM ---
+    // ========================================================================
+    // COLORS & SHAPES
+    // ========================================================================
     const COLORS = {
       cyan: { fill: '#06b6d4', border: '#0891b2', glow: 'rgba(6, 182, 212, 0.5)' },
       blue: { fill: '#3b82f6', border: '#2563eb', glow: 'rgba(59, 130, 246, 0.5)' },
@@ -298,7 +433,6 @@
     };
 
     const ALL_SHAPES = [
-      // --- 4-BLOCK TETROMINO SHAPES ---
       { id: 'I_h', size: [4, 1], cells: [[0,0], [1,0], [2,0], [3,0]], color: 'cyan' },
       { id: 'I_v', size: [1, 4], cells: [[0,0], [0,1], [0,2], [0,3]], color: 'cyan' },
       { id: 'O', size: [2, 2], cells: [[0,0], [1,0], [0,1], [1,1]], color: 'blue' },
@@ -316,285 +450,379 @@
       { id: 'J_3', size: [3, 2], cells: [[0,0], [1,0], [2,0], [2,1]], color: 'pink' },
       { id: 'S', size: [3, 2], cells: [[1,0], [2,0], [0,1], [1,1]], color: 'emerald' },
       { id: 'Z', size: [3, 2], cells: [[0,0], [1,0], [1,1], [2,1]], color: 'emerald' },
-
-      // --- 3-BLOCK SHAPES ---
       { id: '3_line_h', size: [3, 1], cells: [[0,0], [1,0], [2,0]], color: 'amber' },
       { id: '3_line_v', size: [1, 3], cells: [[0,0], [0,1], [0,2]], color: 'amber' },
       { id: '3_corner_0', size: [2, 2], cells: [[0,0], [1,0], [0,1]], color: 'rose' },
       { id: '3_corner_1', size: [2, 2], cells: [[0,0], [1,0], [1,1]], color: 'rose' },
       { id: '3_corner_2', size: [2, 2], cells: [[0,1], [1,1], [0,0]], color: 'rose' },
       { id: '3_corner_3', size: [2, 2], cells: [[0,1], [1,1], [1,0]], color: 'rose' },
-
-      // --- 2-BLOCK SHAPES ---
       { id: '2_line_h', size: [2, 1], cells: [[0,0], [1,0]], color: 'emerald' },
       { id: '2_line_v', size: [1, 2], cells: [[0,0], [0,1]], color: 'emerald' },
-
-      // --- 1-BLOCK SHAPE ---
       { id: '1_single', size: [1, 1], cells: [[0,0]], color: 'cyan' }
     ];
 
-    // --- BOARD ENGINE STATE ---
-    let board = Array(8).fill(null).map(() => Array(8).fill(null));
-    let score = 0;
-    let highScore = parseInt(localStorage.getItem('blockblast_best') || '0', 10);
-    let combo = 0;
-    let comboTimer = null;
-    let dangerModeActive = false;
-    let activePieces = [null, null, null]; // holds active shapes in tray
-    let activeGridPoints = []; // caches placement highlights
+    // ========================================================================
+    // GAME STATE CLASS - reusable for Solo and VS mode instances
+    // ========================================================================
+    class GameState {
+      constructor() {
+        this.board = Array(8).fill(null).map(() => Array(8).fill(null));
+        this.score = 0;
+        this.combo = 0;
+        this.comboTimer = null;
+        this.activePieces = [null, null, null];
+        this.isGameOver = false;
+      }
 
-    // State of drag-drop sequence
-    let dragInfo = {
-      isDragging: false,
-      slotIndex: null,
-      piece: null,
-      startTouchX: 0,
-      startTouchY: 0
-    };
+      cloneBoard() {
+        return this.board.map(r => [...r]);
+      }
 
-    // Cache DOM references
-    const domBoard = document.getElementById('game-board');
-    const domSlots = [
-      document.getElementById('piece-slot-0'),
-      document.getElementById('piece-slot-1'),
-      document.getElementById('piece-slot-2')
-    ];
-    const domScore = document.getElementById('score-display');
-    const domHighScore = document.getElementById('high-score-display');
-    const domCombo = document.getElementById('combo-display');
-    const domComboBar = document.getElementById('combo-bar');
-    const domTip = document.getElementById('tip-text');
-    const domRescuePill = document.getElementById('rescue-pill');
-    const domBtnRestart = document.getElementById('btn-restart');
-    const domModal = document.getElementById('game-over-modal');
-    const domModalScore = document.getElementById('modal-score');
-    const domModalHigh = document.getElementById('modal-high');
-    const dragGhost = document.getElementById('drag-ghost');
-    const boardContainer = document.getElementById('board-container');
-    const audioToggle = document.getElementById('audio-toggle');
+      analyzeBoardDifficulty() {
+        let emptyCells = 0;
+        let isolatedHoles = 0;
+        const grid = [];
+        for (let r = 0; r < 8; r++) {
+          grid[r] = [];
+          for (let c = 0; c < 8; c++) {
+            grid[r][c] = (this.board[r][c] !== null);
+            if (!grid[r][c]) emptyCells++;
+          }
+        }
+        for (let r = 0; r < 8; r++) {
+          for (let c = 0; c < 8; c++) {
+            if (!grid[r][c]) {
+              if ((r === 0 || grid[r - 1][c]) && (r === 7 || grid[r + 1][c]) &&
+                  (c === 0 || grid[r][c - 1]) && (c === 7 || grid[r][c + 1])) {
+                isolatedHoles++;
+              }
+            }
+          }
+        }
+        const isDangerous = (emptyCells < 22) || (isolatedHoles >= 3);
+        return { isDangerous, emptyCells, isolatedHoles };
+      }
 
-    // Display High Score Initial
-    domHighScore.textContent = highScore;
+      pickRandomShape() {
+        const stats = this.analyzeBoardDifficulty();
+        let p4 = 50, p3 = 25, p2 = 15, p1 = 10;
+        if (stats.isDangerous) { p4 = 20; p3 = 20; p2 = 35; p1 = 25; }
+        const total = p4 + p3 + p2 + p1;
+        const roll = Math.random() * total;
+        let chosenSize;
+        if (roll < p4) chosenSize = 4;
+        else if (roll < p4 + p3) chosenSize = 3;
+        else if (roll < p4 + p3 + p2) chosenSize = 2;
+        else chosenSize = 1;
+        const variations = ALL_SHAPES.filter(s => s.cells.length === chosenSize);
+        return JSON.parse(JSON.stringify(variations[Math.floor(Math.random() * variations.length)]));
+      }
 
-    // --- GAME INITIALIZATION ---
-    function initGame() {
-      // Starts cleanly empty
-      board = Array(8).fill(null).map(() => Array(8).fill(null));
-      score = 0;
-      combo = 0;
-      dangerModeActive = false;
-      domScore.textContent = '0';
-      domCombo.textContent = 'x1';
-      domComboBar.style.width = '0%';
-      domRescuePill.classList.add('hidden');
-      domModal.classList.add('hidden');
-      domModal.classList.remove('opacity-100');
-      domModal.classList.add('opacity-0');
-      
-      buildBoardUI();
-      drawBoardState();
-      generateNextSet();
-      saveHighScore();
+      canPlaceAt(shape, boardRow, boardCol) {
+        for (const [cx, cy] of shape.cells) {
+          const r = boardRow + cy;
+          const c = boardCol + cx;
+          if (r < 0 || r >= 8 || c < 0 || c >= 8) return false;
+          if (this.board[r][c] !== null) return false;
+        }
+        return true;
+      }
+
+      canPlaceShapeSomewhere(shape) {
+        if (!shape) return false;
+        for (let r = 0; r <= 8 - shape.size[1]; r++) {
+          for (let c = 0; c <= 8 - shape.size[0]; c++) {
+            if (this.canPlaceAt(shape, r, c)) return true;
+          }
+        }
+        return false;
+      }
+
+      hasAnyValidMove() {
+        for (const piece of this.activePieces) {
+          if (piece && this.canPlaceShapeSomewhere(piece)) return true;
+        }
+        return false;
+      }
+
+      placePiece(shape, boardRow, boardCol) {
+        for (const [cx, cy] of shape.cells) {
+          this.board[boardRow + cy][boardCol + cx] = shape.color;
+        }
+      }
+
+      processLines() {
+        const rows = [];
+        const cols = [];
+        for (let r = 0; r < 8; r++) {
+          if (this.board[r].every(c => c !== null)) rows.push(r);
+        }
+        for (let c = 0; c < 8; c++) {
+          let full = true;
+          for (let r = 0; r < 8; r++) { if (this.board[r][c] === null) { full = false; break; } }
+          if (full) cols.push(c);
+        }
+        const total = rows.length + cols.length;
+        if (total > 0) {
+          this.combo++;
+          let base = 100;
+          if (total === 2) base = 300;
+          else if (total === 3) base = 600;
+          else if (total >= 4) base = 1000;
+          this.score += base * this.combo;
+          rows.forEach(r => { for (let c = 0; c < 8; c++) this.board[r][c] = null; });
+          cols.forEach(c => { for (let r = 0; r < 8; r++) this.board[r][c] = null; });
+        } else {
+          if (this.combo > 1) this.combo--;
+          else this.combo = 0;
+        }
+        return total;
+      }
+
+      // Simulate placing a piece and return lines cleared (without mutating)
+      simulatePlacement(shape, boardRow, boardCol) {
+        const tempBoard = this.cloneBoard();
+        for (const [cx, cy] of shape.cells) {
+          tempBoard[boardRow + cy][boardCol + cx] = true;
+        }
+        let lines = 0;
+        for (let r = 0; r < 8; r++) {
+          if (tempBoard[r].every(c => c !== null)) lines++;
+        }
+        for (let c = 0; c < 8; c++) {
+          let full = true;
+          for (let r = 0; r < 8; r++) { if (tempBoard[r][c] === null) { full = false; break; } }
+          if (full) lines++;
+        }
+        return lines;
+      }
+
+      generateNextSet() {
+        const stats = this.analyzeBoardDifficulty();
+        const forceRescue = stats.emptyCells < 15;
+        let generated = [];
+        let success = false;
+        let attempts = 0;
+        while (!success && attempts < 50) {
+          generated = [
+            this.pickRandomShape(), this.pickRandomShape(), this.pickRandomShape()
+          ];
+          for (let i = 0; i < 3; i++) {
+            if (this.canPlaceShapeSomewhere(generated[i])) { success = true; break; }
+          }
+          attempts++;
+        }
+        if (!success) {
+          generated[Math.floor(Math.random() * 3)] = JSON.parse(JSON.stringify(ALL_SHAPES.find(s => s.cells.length === 1)));
+        }
+        this.activePieces = generated;
+      }
+
+      checkGameOver() {
+        if (!this.hasAnyValidMove()) {
+          this.isGameOver = true;
+          return true;
+        }
+        return false;
+      }
     }
 
-    // Generate UI Grid Cells
-    function buildBoardUI() {
-      domBoard.innerHTML = '';
+    // ========================================================================
+    // AI ENGINE
+    // ========================================================================
+    const AI = {
+      // Find the best move for a given game state
+      findBestMove(gameState) {
+        const pieces = [];
+        for (let i = 0; i < gameState.activePieces.length; i++) {
+          if (gameState.activePieces[i] !== null) {
+            pieces.push({ piece: gameState.activePieces[i], originalIndex: i });
+          }
+        }
+        let bestMove = null;
+        let bestScore = -Infinity;
+
+        for (let pi = 0; pi < pieces.length; pi++) {
+          const { piece, originalIndex } = pieces[pi];
+          const moves = this.getAllValidMoves(gameState, piece);
+          
+          for (const move of moves) {
+            const score = this.evaluateMove(gameState, piece, move.row, move.col, originalIndex);
+            if (score > bestScore) {
+              bestScore = score;
+              bestMove = { pieceIndex: originalIndex, row: move.row, col: move.col, piece: piece };
+            }
+          }
+        }
+
+        return bestMove;
+      },
+
+      getAllValidMoves(gameState, shape) {
+        const moves = [];
+        for (let r = 0; r <= 8 - shape.size[1]; r++) {
+          for (let c = 0; c <= 8 - shape.size[0]; c++) {
+            if (gameState.canPlaceAt(shape, r, c)) {
+              moves.push({ row: r, col: c });
+            }
+          }
+        }
+        return moves;
+      },
+
+      evaluateMove(gameState, shape, row, col, pieceIndex) {
+        // 1. SIMULATE lines cleared by this placement
+        const linesCleared = gameState.simulatePlacement(shape, row, col);
+
+        // 2. SIMULATE board after clearing lines
+        const simBoard = gameState.cloneBoard();
+        // Place the piece
+        for (const [cx, cy] of shape.cells) {
+          simBoard[row + cy][col + cx] = true;
+        }
+        // Clear lines
+        const clearedRows = [];
+        const clearedCols = [];
+        for (let r = 0; r < 8; r++) {
+          if (simBoard[r].every(c => c !== null)) clearedRows.push(r);
+        }
+        for (let c = 0; c < 8; c++) {
+          let full = true;
+          for (let r = 0; r < 8; r++) { if (simBoard[r][c] === null) { full = false; break; } }
+          if (full) clearedCols.push(c);
+        }
+        // Apply clears
+        clearedRows.forEach(r => { for (let c = 0; c < 8; c++) simBoard[r][c] = null; });
+        clearedCols.forEach(c => { for (let r = 0; r < 8; r++) simBoard[r][c] = null; });
+
+        // 3. Check remaining pieces for follow-up clears (look-ahead)
+        let followUpScore = 0;
+        const remainingPieces = gameState.activePieces.filter((p, i) => i !== pieceIndex && p !== null);
+        for (const rp of remainingPieces) {
+          let bestFollowUp = 0;
+          for (let r = 0; r <= 8 - rp.size[1]; r++) {
+            for (let c = 0; c <= 8 - rp.size[0]; c++) {
+              let valid = true;
+              for (const [cx, cy] of rp.cells) {
+                const tr = r + cy, tc = c + cx;
+                if (tr < 0 || tr >= 8 || tc < 0 || tc >= 8 || simBoard[tr][tc] !== null) {
+                  valid = false; break;
+                }
+              }
+              if (valid) {
+                // Simulate follow-up clears
+                const tempBoard2 = simBoard.map(rr => [...rr]);
+                for (const [cx, cy] of rp.cells) tempBoard2[r + cy][c + cx] = true;
+                let followLines = 0;
+                for (let rr = 0; rr < 8; rr++) if (tempBoard2[rr].every(cc => cc !== null)) followLines++;
+                for (let cc = 0; cc < 8; cc++) {
+                  let full = true;
+                  for (let rr = 0; rr < 8; rr++) { if (tempBoard2[rr][cc] === null) { full = false; break; } }
+                  if (full) followLines++;
+                }
+                if (followLines > bestFollowUp) bestFollowUp = followLines;
+              }
+            }
+          }
+          followUpScore += bestFollowUp;
+        }
+
+        // 4. SCORING
+        let score = 0;
+
+        // PRIMARY: Lines cleared (weighted heavily)
+        score += linesCleared * 1000;
+
+        // Look-ahead: lines that could be cleared with remaining pieces
+        score += followUpScore * 300;
+
+        // If this placement clears 2+ lines at once, huge bonus
+        if (linesCleared >= 2) score += 2000;
+        if (linesCleared >= 3) score += 5000;
+        if (linesCleared >= 4) score += 10000;
+
+        // SECONDARY: Placement quality heuristics
+        // Prefer placing near center (more strategic)
+        const centerR = 3.5, centerC = 3.5;
+        const distToCenter = Math.abs(row + shape.size[1]/2 - centerR) + Math.abs(col + shape.size[0]/2 - centerC);
+        score -= distToCenter * 5;
+
+        // Prefer filling gaps (count empty neighbors)
+        let emptyNeighbors = 0;
+        for (const [cx, cy] of shape.cells) {
+          const br = row + cy, bc = col + cx;
+          // Check 4 neighbors
+          [[-1,0],[1,0],[0,-1],[0,1]].forEach(([dr, dc]) => {
+            const nr = br + dr, nc = bc + dc;
+            if (nr >= 0 && nr < 8 && nc >= 0 && nc < 8 && gameState.board[nr][nc] === null) {
+              emptyNeighbors++;
+            }
+          });
+        }
+        score += emptyNeighbors * 2;
+
+        // Prefer smaller pieces when board is crowded (survival)
+        const boardFill = gameState.board.flat().filter(c => c !== null).length;
+        if (boardFill > 50) {
+          score += (4 - shape.cells.length) * 50;
+        }
+
+        return score;
+      }
+    };
+
+    // ========================================================================
+    // RENDER HELPERS
+    // ========================================================================
+    function buildBoardUI(boardEl) {
+      boardEl.innerHTML = '';
       for (let r = 0; r < 8; r++) {
         for (let c = 0; c < 8; c++) {
           const cell = document.createElement('div');
           cell.dataset.row = r;
           cell.dataset.col = c;
           cell.className = 'w-full h-full bg-slate-900/60 border border-slate-800/80 rounded-md transition-all duration-200 relative overflow-hidden';
-          
-          // Subtle inner grid texture
-          const innerSpot = document.createElement('div');
-          innerSpot.className = 'absolute inset-[2px] bg-slate-950/20 rounded-sm';
-          cell.appendChild(innerSpot);
-
-          domBoard.appendChild(cell);
+          const inner = document.createElement('div');
+          inner.className = 'absolute inset-[2px] bg-slate-950/20 rounded-sm';
+          cell.appendChild(inner);
+          boardEl.appendChild(cell);
         }
       }
     }
 
-    // Refresh UI colors of board cells using stored states
-    function drawBoardState() {
-      const cells = domBoard.children;
+    function drawBoardState(boardEl, boardData) {
+      const cells = boardEl.children;
       for (let r = 0; r < 8; r++) {
         for (let c = 0; c < 8; c++) {
-          const cellIdx = r * 8 + c;
-          const cellEl = cells[cellIdx];
-          const val = board[r][c];
-
-          cellEl.style.backgroundColor = '';
-          cellEl.style.borderColor = '';
-          cellEl.style.boxShadow = '';
-
+          const idx = r * 8 + c;
+          const cell = cells[idx];
+          const val = boardData[r][c];
+          cell.style.backgroundColor = '';
+          cell.style.borderColor = '';
+          cell.style.boxShadow = '';
           if (val) {
             const config = COLORS[val];
-            cellEl.style.backgroundColor = config.fill;
-            cellEl.style.borderColor = config.border;
-            cellEl.style.boxShadow = `inset 0 1.5px 3px rgba(255,255,255,0.2), 0 1.5px 3px rgba(0,0,0,0.3)`;
+            cell.style.backgroundColor = config.fill;
+            cell.style.borderColor = config.border;
+            cell.style.boxShadow = 'inset 0 1.5px 3px rgba(255,255,255,0.2), 0 1.5px 3px rgba(0,0,0,0.3)';
           }
         }
       }
     }
 
-    // --- THE SMART SAFE SYSTEM (AI STATE ANALYSIS) ---
-    function analyzeBoardDifficulty() {
-      let emptyCells = 0;
-      let isolatedHoles = 0;
-
-      // Count empty cells & construct quick grid map
-      const grid = [];
-      for (let r = 0; r < 8; r++) {
-        grid[r] = [];
-        for (let c = 0; c < 8; c++) {
-          grid[r][c] = (board[r][c] !== null);
-          if (!grid[r][c]) emptyCells++;
-        }
-      }
-
-      // Check for completely isolated tiny empty pockets (1x1 holes)
-      for (let r = 0; r < 8; r++) {
-        for (let c = 0; c < 8; c++) {
-          if (!grid[r][c]) {
-            let topBlocked = (r === 0 || grid[r - 1][c]);
-            let botBlocked = (r === 7 || grid[r + 1][c]);
-            let leftBlocked = (c === 0 || grid[r][c - 1]);
-            let rightBlocked = (c === 7 || grid[r][c + 1]);
-
-            if (topBlocked && botBlocked && leftBlocked && rightBlocked) {
-              isolatedHoles++;
-            }
-          }
-        }
-      }
-
-      const isDangerous = (emptyCells < 22) || (isolatedHoles >= 3);
-      
-      if (isDangerous && !dangerModeActive) {
-        dangerModeActive = true;
-        domRescuePill.classList.remove('hidden');
-        domTip.textContent = "🚀 Rescue System: Easier shapes enabled!";
-        domTip.className = "text-amber-400 text-[10px] font-semibold animate-pulse";
-      } else if (!isDangerous && dangerModeActive) {
-        dangerModeActive = false;
-        domRescuePill.classList.add('hidden');
-        domTip.textContent = "Drag shapes from the top tray onto the board!";
-        domTip.className = "text-slate-400 text-[10px] font-medium tracking-wide";
-      }
-
-      return {
-        isDangerous,
-        emptyCells,
-        isolatedHoles
-      };
-    }
-
-    // Dynamic Shape Generator with True Probability Distribution Math
-    function pickRandomShape(forceRescueSmall = false) {
-      const stats = analyzeBoardDifficulty();
-      
-      // Category probability distributions (True expected percentiles)
-      let p4 = 50; // 4-block (Tetrominoes)
-      let p3 = 25; // 3-block
-      let p2 = 15; // 2-block
-      let p1 = 10; // 1-block
-
-      if (forceRescueSmall) {
-        p4 = 10;
-        p3 = 15;
-        p2 = 45;
-        p1 = 30;
-      } else if (stats.isDangerous) {
-        p4 = 20;
-        p3 = 20;
-        p2 = 35;
-        p1 = 25;
-      }
-
-      // Roll to select block size category first
-      const totalWeight = p4 + p3 + p2 + p1;
-      const roll = Math.random() * totalWeight;
-
-      let chosenSize;
-      if (roll < p4) {
-        chosenSize = 4;
-      } else if (roll < p4 + p3) {
-        chosenSize = 3;
-      } else if (roll < p4 + p3 + p2) {
-        chosenSize = 2;
-      } else {
-        chosenSize = 1;
-      }
-
-      // Filter variations available for chosen block size
-      const sizeVariations = ALL_SHAPES.filter(s => s.cells.length === chosenSize);
-      
-      // Grab a random variation within size list
-      const chosenShape = sizeVariations[Math.floor(Math.random() * sizeVariations.length)];
-      return JSON.parse(JSON.stringify(chosenShape));
-    }
-
-    // Replenish the 3 block slots
-    function generateNextSet() {
-      const stats = analyzeBoardDifficulty();
-      const forceRescue = stats.emptyCells < 15;
-
-      let generated = [];
-      let success = false;
-      let attempts = 0;
-
-      while (!success && attempts < 100) {
-        generated = [
-          pickRandomShape(forceRescue),
-          pickRandomShape(forceRescue),
-          pickRandomShape(forceRescue)
-        ];
-
-        for (let i = 0; i < 3; i++) {
-          if (canPlaceShapeSomewhere(generated[i])) {
-            success = true;
-            break;
-          }
-        }
-        attempts++;
-      }
-
-      if (!success) {
-        generated[Math.floor(Math.random() * 3)] = JSON.parse(JSON.stringify(ALL_SHAPES.find(s => s.cells.length === 1)));
-      }
-
-      activePieces = generated;
-      for (let i = 0; i < 3; i++) {
-        renderPieceInSlot(i, activePieces[i]);
-      }
-
-      checkGameOver();
-    }
-
-    // Renders mini pieces in the tray container
-    function renderPieceInSlot(slotIdx, piece) {
-      const slotEl = domSlots[slotIdx];
+    function renderPieceInSlot(slotEl, piece, cellSize = 14, onClick = null) {
       slotEl.innerHTML = '';
       if (!piece) return;
-
       const container = document.createElement('div');
-      container.className = 'grid gap-0.5 animate-pop cursor-grab active:cursor-grabbing relative';
-      
-      container.style.gridTemplateColumns = `repeat(${piece.size[0]}, 14px)`;
-      container.style.gridTemplateRows = `repeat(${piece.size[1]}, 14px)`;
-
+      container.className = 'grid gap-0.5 animate-pop relative';
+      container.style.gridTemplateColumns = `repeat(${piece.size[0]}, ${cellSize}px)`;
+      container.style.gridTemplateRows = `repeat(${piece.size[1]}, ${cellSize}px)`;
       const gridMap = Array(piece.size[1]).fill(0).map(() => Array(piece.size[0]).fill(false));
-      piece.cells.forEach(([cx, cy]) => {
-        gridMap[cy][cx] = true;
-      });
-
+      piece.cells.forEach(([cx, cy]) => { gridMap[cy][cx] = true; });
       for (let y = 0; y < piece.size[1]; y++) {
         for (let x = 0; x < piece.size[0]; x++) {
           const block = document.createElement('div');
-          block.className = 'w-3.5 h-3.5 rounded-sm';
+          block.className = `w-[${cellSize}px] h-[${cellSize}px] rounded-sm`;
           if (gridMap[y][x]) {
             const config = COLORS[piece.color];
             block.style.backgroundColor = config.fill;
@@ -607,570 +835,784 @@
           container.appendChild(block);
         }
       }
-
-      container.addEventListener('mousedown', (e) => startDrag(e, slotIdx, piece, false));
-      container.addEventListener('touchstart', (e) => startDrag(e, slotIdx, piece, true), { passive: false });
-
+      if (onClick) {
+        container.style.cursor = 'pointer';
+        container.addEventListener('click', (e) => onClick(e, piece));
+      }
       slotEl.appendChild(container);
     }
 
-    // --- DRAG & DROP CONTROLLER ---
-    function startDrag(e, slotIdx, piece, isTouch) {
-      if (isTouch) {
-        if (e.cancelable) e.preventDefault();
-      }
-
-      sfx.init();
-
-      dragInfo.isDragging = true;
-      dragInfo.slotIndex = slotIdx;
-      dragInfo.piece = piece;
-
-      const clientX = isTouch ? e.touches[0].clientX : e.clientX;
-      const clientY = isTouch ? e.touches[0].clientY : e.clientY;
-
-      dragInfo.startTouchX = clientX;
-      dragInfo.startTouchY = clientY;
-
-      domSlots[slotIdx].children[0].style.opacity = '0.25';
-
-      createGhostMarkup(piece);
-      dragGhost.classList.remove('hidden');
-      updateGhostPosition(clientX, clientY);
-
-      if (isTouch) {
-        window.addEventListener('touchmove', onTouchMove, { passive: false });
-        window.addEventListener('touchend', onDragEnd);
-      } else {
-        window.addEventListener('mousemove', onMouseMove);
-        window.addEventListener('mouseup', onDragEnd);
-      }
-    }
-
-    function createGhostMarkup(piece) {
-      dragGhost.innerHTML = '';
-      const grid = document.createElement('div');
-      
-      const boardCellWidth = domBoard.children[0].offsetWidth || 34;
-      grid.className = 'grid gap-1 dragging-preview';
-      grid.style.gridTemplateColumns = `repeat(${piece.size[0]}, ${boardCellWidth}px)`;
-      grid.style.gridTemplateRows = `repeat(${piece.size[1]}, ${boardCellWidth}px)`;
-
+    function renderAIPieceInSlot(slotEl, piece, cellSize = 10) {
+      slotEl.innerHTML = '';
+      if (!piece) return;
+      const container = document.createElement('div');
+      container.className = 'grid gap-0.5 relative';
+      container.style.gridTemplateColumns = `repeat(${piece.size[0]}, ${cellSize}px)`;
+      container.style.gridTemplateRows = `repeat(${piece.size[1]}, ${cellSize}px)`;
       const gridMap = Array(piece.size[1]).fill(0).map(() => Array(piece.size[0]).fill(false));
-      piece.cells.forEach(([cx, cy]) => {
-        gridMap[cy][cx] = true;
-      });
-
+      piece.cells.forEach(([cx, cy]) => { gridMap[cy][cx] = true; });
       for (let y = 0; y < piece.size[1]; y++) {
         for (let x = 0; x < piece.size[0]; x++) {
           const block = document.createElement('div');
-          block.style.width = `${boardCellWidth}px`;
-          block.style.height = `${boardCellWidth}px`;
-          block.className = 'rounded-md';
-          
+          block.className = `w-[${cellSize}px] h-[${cellSize}px] rounded-sm`;
+          if (gridMap[y][x]) {
+            const config = COLORS[piece.color];
+            block.style.backgroundColor = config.fill;
+            block.style.borderColor = config.border;
+            block.style.borderWidth = '1px';
+            block.style.boxShadow = 'inset 0 1px 1px rgba(255,255,255,0.2)';
+          } else {
+            block.style.opacity = '0';
+          }
+          container.appendChild(block);
+        }
+      }
+      slotEl.appendChild(container);
+    }
+
+    // ========================================================================
+    // PARTICLE SYSTEM
+    // ========================================================================
+    const canvas = document.getElementById('particles-canvas');
+    const ctx = canvas.getContext('2d');
+    let particles = [];
+    function resizeCanvas() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+    class Particle {
+      constructor(x, y, color) { this.x = x; this.y = y; this.size = Math.random() * 4 + 3; this.speedX = (Math.random() - 0.5) * 12; this.speedY = (Math.random() - 0.5) * 12; this.gravity = 0.15; this.color = color; this.alpha = 1; this.decay = Math.random() * 0.02 + 0.015; }
+      update() { this.x += this.speedX; this.y += this.speedY; this.speedY += this.gravity; this.alpha -= this.decay; }
+      draw() { ctx.save(); ctx.globalAlpha = this.alpha; ctx.fillStyle = this.color; ctx.beginPath(); ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2); ctx.fill(); if (this.size > 5) { ctx.shadowBlur = 10; ctx.shadowColor = this.color; } ctx.restore(); }
+    }
+    function spawnBurst(x, y, color) { for (let i = 0; i < 8; i++) particles.push(new Particle(x, y, color)); }
+    function triggerClearingVFX(boardEl, rows, cols, comboCount) {
+      const rect = boardEl.getBoundingClientRect();
+      const padding = 4;
+      const cellW = boardEl.children[0].offsetWidth || 30;
+      const colors = ['#06b6d4', '#a855f7', '#ec4899', '#f59e0b', '#10b981', '#f43f5e'];
+      const color = colors[Math.min(comboCount - 1, colors.length - 1)] || colors[0];
+      rows.forEach(r => {
+        const y = rect.top + r * (cellW + padding) + (cellW / 2);
+        for (let c = 0; c < 8; c++) {
+          const x = rect.left + c * (cellW + padding) + (cellW / 2);
+          spawnBurst(x, y, color);
+        }
+      });
+      cols.forEach(c => {
+        const x = rect.left + c * (cellW + padding) + (cellW / 2);
+        for (let r = 0; r < 8; r++) {
+          const y = rect.top + r * (cellW + padding) + (cellW / 2);
+          spawnBurst(x, y, color);
+        }
+      });
+    }
+    function updateParticles() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      for (let i = particles.length - 1; i >= 0; i--) { const p = particles[i]; p.update(); if (p.alpha <= 0) particles.splice(i, 1); else p.draw(); }
+      requestAnimationFrame(updateParticles);
+    }
+    requestAnimationFrame(updateParticles);
+
+    function shakeScreen(container) {
+      container.classList.remove('shake');
+      void container.offsetWidth;
+      container.classList.add('shake');
+      setTimeout(() => container.classList.remove('shake'), 200);
+    }
+
+    function hapticPulse(pattern) { if ('vibrate' in navigator) { try { navigator.vibrate(pattern); } catch(e) {} } }
+
+    // ========================================================================
+    // HIGH SCORE (Solo only)
+    // ========================================================================
+    let highScore = parseInt(localStorage.getItem('blockblast_best') || '0', 10);
+
+    // ========================================================================
+    // SOLO MODE
+    // ========================================================================
+    const soloGame = new GameState();
+    let soloDragInfo = { isDragging: false, slotIndex: null, piece: null, startX: 0, startY: 0 };
+    let soloActiveGridPoints = [];
+
+    const soloBoardEl = document.getElementById('solo-board');
+    const soloBoardContainer = document.getElementById('solo-board-container');
+    const soloSlots = [0,1,2].map(i => document.getElementById('solo-slot-'+i));
+    const soloScore = document.getElementById('solo-score');
+    const soloCombo = document.getElementById('solo-combo');
+    const soloComboBar = document.getElementById('solo-combo-bar');
+    const soloTip = document.getElementById('solo-tip');
+    const soloRescue = document.getElementById('solo-rescue-pill');
+    const dragGhost = document.getElementById('drag-ghost');
+
+    function soloInit() {
+      soloGame.board = Array(8).fill(null).map(() => Array(8).fill(null));
+      soloGame.score = 0;
+      soloGame.combo = 0;
+      soloGame.isGameOver = false;
+      soloGame.activePieces = [null, null, null];
+      soloScore.textContent = '0';
+      soloCombo.textContent = 'x1';
+      soloComboBar.style.width = '0%';
+      soloRescue.classList.add('hidden');
+      soloTip.textContent = "Drag shapes from the top tray onto the board!";
+      soloTip.className = "text-slate-400 text-[10px] font-medium";
+      buildBoardUI(soloBoardEl);
+      drawBoardState(soloBoardEl, soloGame.board);
+      soloGenerateSet();
+    }
+
+    function soloGenerateSet() {
+      soloGame.generateNextSet();
+      for (let i = 0; i < 3; i++) {
+        renderPieceInSlot(soloSlots[i], soloGame.activePieces[i], 14, null);
+        // Add drag events
+        if (soloGame.activePieces[i]) {
+          const container = soloSlots[i].children[0];
+          if (container) {
+            container.addEventListener('mousedown', (e) => soloStartDrag(e, i, soloGame.activePieces[i], false));
+            container.addEventListener('touchstart', (e) => soloStartDrag(e, i, soloGame.activePieces[i], true), { passive: false });
+          }
+        }
+      }
+      soloCheckGameOver();
+    }
+
+    function soloStartDrag(e, slotIdx, piece, isTouch) {
+      if (isTouch && e.cancelable) e.preventDefault();
+      if (soloGame.isGameOver) return;
+      sfx.init();
+      soloDragInfo.isDragging = true;
+      soloDragInfo.slotIndex = slotIdx;
+      soloDragInfo.piece = piece;
+      const cx = isTouch ? e.touches[0].clientX : e.clientX;
+      const cy = isTouch ? e.touches[0].clientY : e.clientY;
+      soloDragInfo.startX = cx; soloDragInfo.startY = cy;
+      if (soloSlots[slotIdx].children[0]) soloSlots[slotIdx].children[0].style.opacity = '0.25';
+      createGhostMarkup(piece, 14);
+      dragGhost.classList.remove('hidden');
+      updateGhostPosition(cx, cy, 'solo');
+      if (isTouch) {
+        window.addEventListener('touchmove', soloOnTouchMove, { passive: false });
+        window.addEventListener('touchend', soloOnDragEnd);
+      } else {
+        window.addEventListener('mousemove', soloOnMouseMove);
+        window.addEventListener('mouseup', soloOnDragEnd);
+      }
+    }
+
+    function soloOnMouseMove(e) { if (!soloDragInfo.isDragging) return; updateGhostPosition(e.clientX, e.clientY, 'solo'); }
+    function soloOnTouchMove(e) {
+      if (!soloDragInfo.isDragging) return;
+      if (e.cancelable) e.preventDefault();
+      const t = e.touches[0];
+      updateGhostPosition(t.clientX, t.clientY, 'solo');
+    }
+
+    function createGhostMarkup(piece, cellSize = 14) {
+      dragGhost.innerHTML = '';
+      const grid = document.createElement('div');
+      grid.className = 'grid gap-0.5 dragging-preview';
+      grid.style.gridTemplateColumns = `repeat(${piece.size[0]}, ${cellSize}px)`;
+      grid.style.gridTemplateRows = `repeat(${piece.size[1]}, ${cellSize}px)`;
+      const gridMap = Array(piece.size[1]).fill(0).map(() => Array(piece.size[0]).fill(false));
+      piece.cells.forEach(([cx, cy]) => { gridMap[cy][cx] = true; });
+      for (let y = 0; y < piece.size[1]; y++) {
+        for (let x = 0; x < piece.size[0]; x++) {
+          const block = document.createElement('div');
+          block.style.width = cellSize + 'px';
+          block.style.height = cellSize + 'px';
+          block.className = 'rounded-sm';
           if (gridMap[y][x]) {
             const config = COLORS[piece.color];
             block.style.backgroundColor = config.fill;
             block.style.borderColor = config.border;
             block.style.borderWidth = '2px';
             block.style.boxShadow = `0 4px 6px -1px ${config.glow}, inset 0 2px 4px rgba(255,255,255,0.3)`;
-          } else {
-            block.style.opacity = '0';
-          }
+          } else { block.style.opacity = '0'; }
           grid.appendChild(block);
         }
       }
-
       dragGhost.appendChild(grid);
     }
 
-    // ADAPTIVE SNAPPING LOGIC
-    function updateGhostPosition(clientX, clientY) {
-      const rect = domBoard.getBoundingClientRect();
+    function updateGhostPosition(clientX, clientY, mode) {
+      const boardEl = mode === 'solo' ? soloBoardEl : document.getElementById('vs-player-board');
+      const boardCont = mode === 'solo' ? soloBoardContainer : document.getElementById('vs-player-board-container');
+      const rect = boardEl.getBoundingClientRect();
       const cellSize = rect.width / 8;
-      
-      const threshold = 15; // padding margin tolerance
-      const isOverBoard = (
-        clientX >= rect.left - threshold &&
-        clientX <= rect.right + threshold &&
-        clientY >= rect.top - threshold &&
-        clientY <= rect.bottom + threshold
-      );
-
+      const threshold = 15;
+      const isOver = clientX >= rect.left - threshold && clientX <= rect.right + threshold && clientY >= rect.top - threshold && clientY <= rect.bottom + threshold;
       let left, top;
-
-      if (isOverBoard) {
-        // --- PRECISION SNAPPING ACTIVE ---
-        const relativeX = clientX - rect.left;
-        const relativeY = clientY - rect.top;
-        const colIdx = Math.floor(relativeX / cellSize);
-        const rowIdx = Math.floor(relativeY / cellSize);
-
+      if (isOver) {
+        const colIdx = Math.floor((clientX - rect.left) / cellSize);
+        const rowIdx = Math.floor((clientY - rect.top) / cellSize);
         left = rect.left + (colIdx * cellSize);
         top = rect.top + (rowIdx * cellSize);
-
-        calculatePlacementPreview(clientX, clientY, true);
+        calculatePlacementPreview(clientX, clientY, true, mode);
       } else {
-        // --- FLOATING SCALAR OFFSET ---
-        const offsetTouchY = -70; 
+        const offsetTouchY = -70;
         left = clientX - (dragGhost.offsetWidth / 2);
         top = clientY - (dragGhost.offsetHeight / 2) + offsetTouchY;
-
-        calculatePlacementPreview(clientX, clientY + offsetTouchY, false);
+        calculatePlacementPreview(clientX, clientY + offsetTouchY, false, mode);
       }
-
-      dragGhost.style.left = `${left}px`;
-      dragGhost.style.top = `${top}px`;
+      dragGhost.style.left = left + 'px';
+      dragGhost.style.top = top + 'px';
     }
 
-    function onMouseMove(e) {
-      if (!dragInfo.isDragging) return;
-      updateGhostPosition(e.clientX, e.clientY);
-    }
-
-    function onTouchMove(e) {
-      if (!dragInfo.isDragging) return;
-      if (e.cancelable) e.preventDefault();
-      const touch = e.touches[0];
-      updateGhostPosition(touch.clientX, touch.clientY);
-    }
-
-    function calculatePlacementPreview(targetX, targetY, isPreSnapped = false) {
-      clearPreviewShadows();
-
-      const rect = domBoard.getBoundingClientRect();
+    function calculatePlacementPreview(targetX, targetY, snapped, mode) {
+      const boardEl = mode === 'solo' ? soloBoardEl : document.getElementById('vs-player-board');
+      const gameState = mode === 'solo' ? soloGame : vsPlayerGame;
+      const dragInfo = mode === 'solo' ? soloDragInfo : vsDragInfo;
+      clearPreviewShadows(mode);
+      const rect = boardEl.getBoundingClientRect();
       const cellSize = rect.width / 8;
-      
-      let colIdx, rowIdx;
-
-      if (isPreSnapped) {
-        const relativeX = targetX - rect.left;
-        const relativeY = targetY - rect.top;
-        colIdx = Math.floor(relativeX / cellSize);
-        rowIdx = Math.floor(relativeY / cellSize);
-      } else {
-        const relativeX = targetX - rect.left;
-        const relativeY = targetY - rect.top;
-        colIdx = Math.floor(relativeX / cellSize);
-        rowIdx = Math.floor(relativeY / cellSize);
-      }
-
-      const cellsToHighlight = [];
+      const colIdx = Math.floor((targetX - rect.left) / cellSize);
+      const rowIdx = Math.floor((targetY - rect.top) / cellSize);
+      const cells = [];
       let allValid = true;
-
       for (const [cx, cy] of dragInfo.piece.cells) {
-        const boardRow = rowIdx + cy;
-        const boardCol = colIdx + cx;
-
-        if (boardRow >= 0 && boardRow < 8 && boardCol >= 0 && boardCol < 8) {
-          cellsToHighlight.push({ r: boardRow, c: boardCol });
-          if (board[boardRow][boardCol] !== null) {
-            allValid = false;
-          }
-        } else {
-          allValid = false;
-        }
+        const br = rowIdx + cy, bc = colIdx + cx;
+        if (br >= 0 && br < 8 && bc >= 0 && bc < 8) {
+          cells.push({ r: br, c: bc });
+          if (gameState.board[br][bc] !== null) allValid = false;
+        } else { allValid = false; }
       }
-
-      if (cellsToHighlight.length === dragInfo.piece.cells.length) {
-        activeGridPoints = cellsToHighlight;
-        cellsToHighlight.forEach(({ r, c }) => {
-          const index = r * 8 + c;
-          const cellEl = domBoard.children[index];
-          
+      if (cells.length === dragInfo.piece.cells.length) {
+        if (mode === 'solo') { soloActiveGridPoints = cells; } else { vsActiveGridPoints = cells; }
+        cells.forEach(({ r, c }) => {
+          const idx = r * 8 + c;
+          const cell = boardEl.children[idx];
           if (allValid) {
-            cellEl.style.backgroundColor = COLORS[dragInfo.piece.color].fill;
-            cellEl.style.opacity = '0.7'; 
-            cellEl.classList.add('pulse-glow');
+            cell.style.backgroundColor = COLORS[dragInfo.piece.color].fill;
+            cell.style.opacity = '0.7';
+            cell.classList.add('pulse-glow');
           } else {
-            cellEl.style.backgroundColor = 'rgba(239, 68, 68, 0.65)'; 
+            cell.style.backgroundColor = 'rgba(239, 68, 68, 0.65)';
           }
         });
       } else {
-        activeGridPoints = [];
+        if (mode === 'solo') { soloActiveGridPoints = []; } else { vsActiveGridPoints = []; }
       }
     }
 
-    function clearPreviewShadows() {
-      drawBoardState();
-      for (let i = 0; i < domBoard.children.length; i++) {
-        domBoard.children[i].style.opacity = '1';
-        domBoard.children[i].classList.remove('pulse-glow');
+    function clearPreviewShadows(mode) {
+      const boardEl = mode === 'solo' ? soloBoardEl : document.getElementById('vs-player-board');
+      const gameState = mode === 'solo' ? soloGame : vsPlayerGame;
+      drawBoardState(boardEl, gameState.board);
+      for (let i = 0; i < boardEl.children.length; i++) {
+        boardEl.children[i].style.opacity = '1';
+        boardEl.children[i].classList.remove('pulse-glow');
       }
     }
 
-    function onDragEnd(e) {
-      if (!dragInfo.isDragging) return;
-
-      window.removeEventListener('mousemove', onMouseMove);
-      window.removeEventListener('mouseup', onDragEnd);
-      window.removeEventListener('touchmove', onTouchMove);
-      window.removeEventListener('touchend', onDragEnd);
-
+    function soloOnDragEnd(e) {
+      if (!soloDragInfo.isDragging) return;
+      window.removeEventListener('mousemove', soloOnMouseMove);
+      window.removeEventListener('mouseup', soloOnDragEnd);
+      window.removeEventListener('touchmove', soloOnTouchMove);
+      window.removeEventListener('touchend', soloOnDragEnd);
       dragGhost.classList.add('hidden');
-      const slotIdx = dragInfo.slotIndex;
-      const slotEl = domSlots[slotIdx];
-
-      if (slotEl.children[0]) {
-        slotEl.children[0].style.opacity = '1';
-      }
-
-      if (activeGridPoints.length === dragInfo.piece.cells.length) {
+      const slotIdx = soloDragInfo.slotIndex;
+      if (soloSlots[slotIdx].children[0]) soloSlots[slotIdx].children[0].style.opacity = '1';
+      if (soloActiveGridPoints.length === soloDragInfo.piece.cells.length) {
         let canDrop = true;
-        for (const { r, c } of activeGridPoints) {
-          if (board[r][c] !== null) {
-            canDrop = false;
-            break;
-          }
-        }
-
+        for (const { r, c } of soloActiveGridPoints) { if (soloGame.board[r][c] !== null) { canDrop = false; break; } }
         if (canDrop) {
-          const currentPieceColor = dragInfo.piece.color;
-          activeGridPoints.forEach(({ r, c }) => {
-            board[r][c] = currentPieceColor;
-          });
-
-          activePieces[slotIdx] = null;
-          slotEl.innerHTML = '';
-
+          const color = soloDragInfo.piece.color;
+          soloActiveGridPoints.forEach(({ r, c }) => { soloGame.board[r][c] = color; });
+          soloGame.activePieces[slotIdx] = null;
+          soloSlots[slotIdx].innerHTML = '';
           sfx.playPlace();
           hapticPulse(15);
-
-          drawBoardState();
-          activeGridPoints = [];
-
-          processLines();
-
-          const remaining = activePieces.filter(p => p !== null).length;
-          if (remaining === 0) {
-            generateNextSet();
-          } else {
-            checkGameOver();
-          }
+          drawBoardState(soloBoardEl, soloGame.board);
+          soloActiveGridPoints = [];
+          soloProcessLines();
+          const remaining = soloGame.activePieces.filter(p => p !== null).length;
+          if (remaining === 0) { soloGenerateSet(); }
+          else { soloCheckGameOver(); }
         } else {
-          sfx.playPlace(); 
+          sfx.playPlace();
         }
       }
-
-      dragInfo.isDragging = false;
-      dragInfo.slotIndex = null;
-      dragInfo.piece = null;
-      activeGridPoints = [];
-      clearPreviewShadows();
+      soloDragInfo.isDragging = false;
+      soloDragInfo.slotIndex = null;
+      soloDragInfo.piece = null;
+      soloActiveGridPoints = [];
+      clearPreviewShadows('solo');
     }
 
-    // --- GAMEPLAY MECHANICS: LINE CLEARS & COMBO ---
-    function processLines() {
-      const rowsToClear = [];
-      const colsToClear = [];
-
-      // Detect full rows
-      for (let r = 0; r < 8; r++) {
-        let isFull = true;
-        for (let c = 0; c < 8; c++) {
-          if (board[r][c] === null) {
-            isFull = false;
-            break;
-          }
-        }
-        if (isFull) rowsToClear.push(r);
-      }
-
-      // Detect full columns
-      for (let c = 0; c < 8; c++) {
-        let isFull = true;
-        for (let r = 0; r < 8; r++) {
-          if (board[r][c] === null) {
-            isFull = false;
-            break;
-          }
-        }
-        if (isFull) colsToClear.push(c);
-      }
-
-      const totalClears = rowsToClear.length + colsToClear.length;
-
-      if (totalClears > 0) {
-        combo++;
-        triggerClearingVFX(rowsToClear, colsToClear, combo);
-
-        let baseBonus = 100;
-        if (totalClears === 2) baseBonus = 300;
-        else if (totalClears === 3) baseBonus = 600;
-        else if (totalClears >= 4) baseBonus = 1000;
-
-        const turnPoints = baseBonus * combo;
-        score += turnPoints;
-
-        domScore.textContent = score;
-        domCombo.textContent = `x${combo}`;
-        domComboBar.style.width = `${Math.min(combo * 15, 100)}%`;
-
-        shakeScreen(totalClears);
-
-        if (combo >= 4) {
-          sfx.playComboMax();
-        } else {
-          sfx.playClear(combo);
-        }
-
-        hapticPulse(totalClears * 20);
-
-        rowsToClear.forEach(r => {
-          for (let c = 0; c < 8; c++) board[r][c] = null;
-        });
-        colsToClear.forEach(c => {
-          for (let r = 0; r < 8; r++) board[r][c] = null;
-        });
-
+    function soloProcessLines() {
+      const cleared = soloGame.processLines();
+      if (cleared > 0) {
+        const rows = []; const cols = [];
+        // Re-derive from combo (lines cleared)
+        // (Already processed in processLines)
+        document.getElementById('solo-score').textContent = soloGame.score;
+        soloCombo.textContent = `x${soloGame.combo}`;
+        soloComboBar.style.width = `${Math.min(soloGame.combo * 15, 100)}%`;
+        shakeScreen(soloBoardContainer);
+        triggerClearingVFX(soloBoardEl, rows, cols, soloGame.combo);
+        if (soloGame.combo >= 4) sfx.playComboMax(); else sfx.playClear(soloGame.combo);
+        hapticPulse(cleared * 20);
         setTimeout(() => {
-          drawBoardState();
-          saveHighScore();
-          analyzeBoardDifficulty();
+          drawBoardState(soloBoardEl, soloGame.board);
+          saveHighScoreSolo();
+          updateSoloDifficulty();
         }, 150);
-
-        resetComboTimeout();
+        resetSoloComboTimeout();
       } else {
-        decayCombo();
+        if (soloGame.combo > 0) { soloGame.combo = Math.max(0, soloGame.combo - 1); soloCombo.textContent = `x${Math.max(1, soloGame.combo)}`; soloComboBar.style.width = `${Math.min(soloGame.combo * 15, 100)}%`; }
       }
     }
 
-    function resetComboTimeout() {
-      if (comboTimer) clearTimeout(comboTimer);
-      comboTimer = setTimeout(() => {
-        domComboBar.style.width = '0%';
-      }, 5000);
+    function resetSoloComboTimeout() {
+      if (soloGame.comboTimer) clearTimeout(soloGame.comboTimer);
+      soloGame.comboTimer = setTimeout(() => { soloComboBar.style.width = '0%'; }, 5000);
     }
 
-    function decayCombo() {
-      if (combo > 1) {
-        combo = Math.max(1, combo - 1);
-        domCombo.textContent = `x${combo}`;
-        domComboBar.style.width = `${Math.min(combo * 15, 100)}%`;
+    function updateSoloDifficulty() {
+      const stats = soloGame.analyzeBoardDifficulty();
+      if (stats.isDangerous && !document.querySelector('#solo-rescue-pill:not(.hidden)')) {
+        soloRescue.classList.remove('hidden');
+        soloTip.textContent = "🚀 Rescue System: Easier shapes enabled!";
+        soloTip.className = "text-amber-400 text-[10px] font-semibold animate-pulse";
+      } else if (!stats.isDangerous) {
+        soloRescue.classList.add('hidden');
+        soloTip.textContent = "Drag shapes from the top tray onto the board!";
+        soloTip.className = "text-slate-400 text-[10px] font-medium";
       }
     }
 
-    // --- BOARD PLACEMENT SOLVER (FAILSAFE DETECTORS) ---
-    function canPlaceShapeSomewhere(shape) {
-      if (!shape) return false;
-
-      for (let r = 0; r <= 8 - shape.size[1]; r++) {
-        for (let c = 0; c <= 8 - shape.size[0]; c++) {
-          let matches = true;
-
-          for (const [cx, cy] of shape.cells) {
-            const targetRow = r + cy;
-            const targetCol = c + cx;
-            if (board[targetRow][targetCol] !== null) {
-              matches = false;
-              break;
-            }
-          }
-
-          if (matches) return true;
-        }
-      }
-      return false;
-    }
-
-    // Scans if there are valid placement movements remaining on board
-    function checkGameOver() {
-      const remainingPieces = activePieces.filter(p => p !== null);
-      if (remainingPieces.length === 0) return;
-
-      let hasValidMove = false;
-      for (const piece of remainingPieces) {
-        if (canPlaceShapeSomewhere(piece)) {
-          hasValidMove = true;
-          break;
-        }
-      }
-
-      if (!hasValidMove) {
-        triggerGameOver();
+    function soloCheckGameOver() {
+      if (soloGame.checkGameOver()) {
+        sfx.playGameOver();
+        hapticPulse([50, 100, 50, 150]);
+        document.getElementById('modal-score').textContent = soloGame.score;
+        document.getElementById('modal-high').textContent = highScore;
+        document.getElementById('modal-icon').innerHTML = '💀';
+        document.getElementById('modal-title').textContent = 'NO MOVES';
+        document.getElementById('modal-desc').textContent = 'The grid is too cluttered and none of your shapes fit.';
+        document.getElementById('modal-retry').onclick = () => { hideModal('game-over-modal'); soloInit(); };
+        document.getElementById('modal-menu').onclick = () => { hideModal('game-over-modal'); showScreen('mode-screen'); };
+        showModal('game-over-modal');
       }
     }
 
-    function triggerGameOver() {
-      sfx.playGameOver();
-      hapticPulse([50, 100, 50, 150]);
-
-      domModalScore.textContent = score;
-      domModalHigh.textContent = highScore;
-      
-      domModal.classList.remove('hidden');
-      setTimeout(() => {
-        domModal.classList.remove('opacity-0');
-        domModal.classList.add('opacity-100');
-      }, 50);
-    }
-
-    function saveHighScore() {
-      if (score > highScore) {
-        highScore = score;
-        domHighScore.textContent = highScore;
+    function saveHighScoreSolo() {
+      if (soloGame.score > highScore) {
+        highScore = soloGame.score;
+        document.getElementById('solo-high').textContent = highScore;
         localStorage.setItem('blockblast_best', highScore.toString());
       }
     }
 
-    // --- GRAPHICAL FX & PARTICLES SYSTEM ---
-    const canvas = document.getElementById('particles-canvas');
-    const ctx = canvas.getContext('2d');
-    let particles = [];
+    // ========================================================================
+    // VS AI MODE
+    // ========================================================================
+    const vsPlayerGame = new GameState();
+    const vsAIGame = new GameState();
+    let vsTurn = 'player'; // 'player' or 'ai'
+    let vsGameActive = false;
+    let vsWaitingForAI = false;
 
-    function resizeCanvas() {
-      canvas.width = window.innerWidth;
-      canvas.height = window.innerHeight;
-    }
-    window.addEventListener('resize', resizeCanvas);
-    resizeCanvas();
+    const vsPlayerBoard = document.getElementById('vs-player-board');
+    const vsPlayerBoardContainer = document.getElementById('vs-player-board-container');
+    const vsAIBoard = document.getElementById('vs-ai-board');
+    const vsAIBoardContainer = document.getElementById('vs-ai-board-container');
+    const vsPlayerSlots = [0,1,2].map(i => document.getElementById('vs-player-slot-'+i));
+    const vsAISlots = [0,1,2].map(i => document.getElementById('vs-ai-slot-'+i));
+    const vsPlayerScore = document.getElementById('vs-player-score');
+    const vsAIScore = document.getElementById('vs-ai-score');
+    const vsTurnIndicator = document.getElementById('vs-turn-indicator');
+    const vsTip = document.getElementById('vs-tip');
 
-    class Particle {
-      constructor(x, y, color) {
-        this.x = x;
-        this.y = y;
-        this.size = Math.random() * 4 + 3;
-        this.speedX = (Math.random() - 0.5) * 12;
-        this.speedY = (Math.random() - 0.5) * 12;
-        this.gravity = 0.15;
-        this.color = color;
-        this.alpha = 1;
-        this.decay = Math.random() * 0.02 + 0.015;
-      }
+    let vsDragInfo = { isDragging: false, slotIndex: null, piece: null, startX: 0, startY: 0 };
+    let vsActiveGridPoints = [];
 
-      update() {
-        this.x += this.speedX;
-        this.y += this.speedY;
-        this.speedY += this.gravity;
-        this.alpha -= this.decay;
-      }
-
-      draw() {
-        ctx.save();
-        ctx.globalAlpha = this.alpha;
-        ctx.fillStyle = this.color;
-        ctx.beginPath();
-        ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
-        ctx.fill();
-        
-        if (this.size > 5) {
-          ctx.shadowBlur = 10;
-          ctx.shadowColor = this.color;
-        }
-        ctx.restore();
-      }
-    }
-
-    function triggerClearingVFX(rows, cols, currentCombo) {
-      const rect = domBoard.getBoundingClientRect();
-      const cellWidth = domBoard.children[0].offsetWidth;
-      const padding = 4;
-      
-      const particleColors = ['#06b6d4', '#a855f7', '#ec4899', '#f59e0b', '#10b981', '#f43f5e'];
-      const chosenColor = particleColors[Math.min(currentCombo - 1, particleColors.length - 1)];
-
-      rows.forEach(r => {
-        const rowY = rect.top + r * (cellWidth + padding) + (cellWidth / 2);
-        for (let c = 0; c < 8; c++) {
-          const index = r * 8 + c;
-          const cellEl = domBoard.children[index];
-          triggerCellGlowAnimation(cellEl);
-          
-          const colX = rect.left + c * (cellWidth + padding) + (cellWidth / 2);
-          spawnBurst(colX, rowY, chosenColor);
-        }
-      });
-
-      cols.forEach(c => {
-        const colX = rect.left + c * (cellWidth + padding) + (cellWidth / 2);
-        for (let r = 0; r < 8; r++) {
-          const index = r * 8 + c;
-          const cellEl = domBoard.children[index];
-          triggerCellGlowAnimation(cellEl);
-
-          const rowY = rect.top + r * (cellWidth + padding) + (cellWidth / 2);
-          spawnBurst(colX, rowY, chosenColor);
-        }
-      });
+    function vsInit() {
+      vsPlayerGame.board = Array(8).fill(null).map(() => Array(8).fill(null));
+      vsPlayerGame.score = 0;
+      vsPlayerGame.combo = 0;
+      vsPlayerGame.isGameOver = false;
+      vsPlayerGame.activePieces = [null, null, null];
+      vsAIGame.board = Array(8).fill(null).map(() => Array(8).fill(null));
+      vsAIGame.score = 0;
+      vsAIGame.combo = 0;
+      vsAIGame.isGameOver = false;
+      vsAIGame.activePieces = [null, null, null];
+      vsTurn = 'player';
+      vsGameActive = true;
+      vsWaitingForAI = false;
+      vsPlayerScore.textContent = '0';
+      vsAIScore.textContent = '0';
+      vsTurnIndicator.textContent = 'Your Turn';
+      vsTurnIndicator.className = 'text-[11px] bg-emerald-700/60 px-2 py-0.5 rounded-full font-bold';
+      vsTip.textContent = 'Place a shape, then the AI takes its turn!';
+      vsTip.className = 'text-slate-400 text-[9px] font-medium';
+      buildBoardUI(vsPlayerBoard);
+      buildBoardUI(vsAIBoard);
+      drawBoardState(vsPlayerBoard, vsPlayerGame.board);
+      drawBoardState(vsAIBoard, vsAIGame.board);
+      vsGenerateSet('player');
+      vsGenerateSet('ai');
+      // AI pieces are just visual - we auto-generate for AI too
     }
 
-    function triggerCellGlowAnimation(cellEl) {
-      cellEl.style.transition = 'none';
-      cellEl.style.transform = 'scale(0.9)';
-      cellEl.style.opacity = '0.3';
-      
-      setTimeout(() => {
-        cellEl.style.transition = 'transform 0.3s ease-out, opacity 0.3s ease-out';
-        cellEl.style.transform = 'scale(1)';
-        cellEl.style.opacity = '1';
-      }, 50);
-    }
-
-    // Spawns particles
-    function spawnBurst(x, y, color) {
-      const amount = 8;
-      for (let i = 0; i < amount; i++) {
-        particles.push(new Particle(x, y, color));
-      }
-    }
-
-    function updateParticles() {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      for (let i = particles.length - 1; i >= 0; i--) {
-        const p = particles[i];
-        p.update();
-        if (p.alpha <= 0) {
-          particles.splice(i, 1);
+    function vsGenerateSet(who) {
+      const game = who === 'player' ? vsPlayerGame : vsAIGame;
+      const slots = who === 'player' ? vsPlayerSlots : vsAISlots;
+      game.generateNextSet();
+      for (let i = 0; i < 3; i++) {
+        if (who === 'player') {
+          renderPieceInSlot(slots[i], game.activePieces[i], 12, null);
+          const container = slots[i].children[0];
+          if (container && game.activePieces[i]) {
+            // Remove old listeners and add new ones
+            const newContainer = container.cloneNode(true);
+            slots[i].innerHTML = '';
+            renderPieceInSlot(slots[i], game.activePieces[i], 12, null);
+            const newEl = slots[i].children[0];
+            if (newEl) {
+              newEl.addEventListener('mousedown', (e) => vsStartDrag(e, i, game.activePieces[i], false));
+              newEl.addEventListener('touchstart', (e) => vsStartDrag(e, i, game.activePieces[i], true), { passive: false });
+            }
+          }
         } else {
-          p.draw();
+          renderAIPieceInSlot(slots[i], game.activePieces[i], 9);
         }
       }
-      requestAnimationFrame(updateParticles);
-    }
-    requestAnimationFrame(updateParticles);
-
-    // --- ACCESSIBILITY AND UTILITIES ---
-    function shakeScreen(lines) {
-      const container = boardContainer;
-      container.classList.remove('shake');
-      void container.offsetWidth;
-      container.classList.add('shake');
-      
-      setTimeout(() => {
-        container.classList.remove('shake');
-      }, 200);
+      if (who === 'player') vsCheckGameOver('player');
+      else vsCheckGameOver('ai');
     }
 
-    // Vibration support
-    function hapticPulse(pattern) {
-      if ('vibrate' in navigator) {
-        try {
-          navigator.vibrate(pattern);
-        } catch (e) {
-          // ignore potential context exceptions
-        }
-      }
-    }
-
-    audioToggle.addEventListener('click', () => {
+    function vsStartDrag(e, slotIdx, piece, isTouch) {
+      if (isTouch && e.cancelable) e.preventDefault();
+      if (!vsGameActive || vsTurn !== 'player' || vsWaitingForAI || vsPlayerGame.isGameOver) return;
       sfx.init();
-      sfx.muted = !sfx.muted;
-      if (sfx.muted) {
-        audioToggle.textContent = '🔇 Sound Off';
-        audioToggle.className = "px-2 py-1 bg-slate-800/40 hover:bg-slate-700/40 border border-slate-700 text-slate-400 rounded-full transition-all text-[11px] flex items-center justify-center gap-1";
+      vsDragInfo.isDragging = true;
+      vsDragInfo.slotIndex = slotIdx;
+      vsDragInfo.piece = piece;
+      const cx = isTouch ? e.touches[0].clientX : e.clientX;
+      const cy = isTouch ? e.touches[0].clientY : e.clientY;
+      vsDragInfo.startX = cx; vsDragInfo.startY = cy;
+      if (vsPlayerSlots[slotIdx].children[0]) vsPlayerSlots[slotIdx].children[0].style.opacity = '0.25';
+      createGhostMarkup(piece, 12);
+      dragGhost.classList.remove('hidden');
+      updateGhostPosition(cx, cy, 'vs');
+      if (isTouch) {
+        window.addEventListener('touchmove', vsOnTouchMove, { passive: false });
+        window.addEventListener('touchend', vsOnDragEnd);
       } else {
-        audioToggle.textContent = '🔊 Sound On';
-        audioToggle.className = "px-2 py-1 bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700 rounded-full transition-all text-[11px] flex items-center justify-center gap-1";
+        window.addEventListener('mousemove', vsOnMouseMove);
+        window.addEventListener('mouseup', vsOnDragEnd);
       }
+    }
+
+    function vsOnMouseMove(e) { if (!vsDragInfo.isDragging) return; updateGhostPosition(e.clientX, e.clientY, 'vs'); }
+    function vsOnTouchMove(e) {
+      if (!vsDragInfo.isDragging) return;
+      if (e.cancelable) e.preventDefault();
+      const t = e.touches[0];
+      updateGhostPosition(t.clientX, t.clientY, 'vs');
+    }
+
+    function vsOnDragEnd(e) {
+      if (!vsDragInfo.isDragging) return;
+      window.removeEventListener('mousemove', vsOnMouseMove);
+      window.removeEventListener('mouseup', vsOnDragEnd);
+      window.removeEventListener('touchmove', vsOnTouchMove);
+      window.removeEventListener('touchend', vsOnDragEnd);
+      dragGhost.classList.add('hidden');
+      const slotIdx = vsDragInfo.slotIndex;
+      if (vsPlayerSlots[slotIdx].children[0]) vsPlayerSlots[slotIdx].children[0].style.opacity = '1';
+      if (vsActiveGridPoints.length === vsDragInfo.piece.cells.length) {
+        let canDrop = true;
+        for (const { r, c } of vsActiveGridPoints) { if (vsPlayerGame.board[r][c] !== null) { canDrop = false; break; } }
+        if (canDrop) {
+          const color = vsDragInfo.piece.color;
+          vsActiveGridPoints.forEach(({ r, c }) => { vsPlayerGame.board[r][c] = color; });
+          vsPlayerGame.activePieces[slotIdx] = null;
+          vsPlayerSlots[slotIdx].innerHTML = '';
+          sfx.playPlace();
+          hapticPulse(15);
+          drawBoardState(vsPlayerBoard, vsPlayerGame.board);
+          vsActiveGridPoints = [];
+          vsProcessLines('player');
+          const remaining = vsPlayerGame.activePieces.filter(p => p !== null).length;
+          if (remaining === 0) { vsGenerateSet('player'); }
+          else { vsCheckGameOver('player'); }
+          // Switch turn to AI if game is still active
+          if (vsGameActive && !vsPlayerGame.isGameOver) {
+            vsStartAITurn();
+          }
+        } else {
+          sfx.playPlace();
+        }
+      }
+      vsDragInfo.isDragging = false;
+      vsDragInfo.slotIndex = null;
+      vsDragInfo.piece = null;
+      vsActiveGridPoints = [];
+      clearPreviewShadows('vs');
+    }
+
+    function vsProcessLines(who) {
+      const game = who === 'player' ? vsPlayerGame : vsAIGame;
+      const boardEl = who === 'player' ? vsPlayerBoard : vsAIBoard;
+      const boardCont = who === 'player' ? vsPlayerBoardContainer : vsAIBoardContainer;
+      const scoreEl = who === 'player' ? vsPlayerScore : vsAIScore;
+      const cleared = game.processLines();
+      if (cleared > 0) {
+        scoreEl.textContent = game.score;
+        shakeScreen(boardCont);
+        triggerClearingVFX(boardEl, [], [], game.combo);
+        if (game.combo >= 4) sfx.playComboMax(); else sfx.playClear(game.combo);
+        hapticPulse(cleared * 20);
+        setTimeout(() => drawBoardState(boardEl, game.board), 150);
+      }
+    }
+
+    function vsCheckGameOver(who) {
+      const game = who === 'player' ? vsPlayerGame : vsAIGame;
+      if (game.checkGameOver()) {
+        game.isGameOver = true;
+        // Check if the other player is also game over
+        const other = who === 'player' ? vsAIGame : vsPlayerGame;
+        if (other.isGameOver) {
+          vsEndGame();
+        } else if (who === 'player') {
+          // Player is game over, AI might still be playing (but in this version, AI turn hasn't happened yet)
+          vsEndGame();
+        } else {
+          // AI is game over, check if player is too
+          if (vsPlayerGame.isGameOver) {
+            vsEndGame();
+          } else {
+            // Player wins!
+            vsEndGame();
+          }
+        }
+      }
+    }
+
+    function vsStartAITurn() {
+      if (!vsGameActive || vsAIGame.isGameOver) {
+        vsEndGame();
+        return;
+      }
+      vsTurn = 'ai';
+      vsWaitingForAI = true;
+      vsTurnIndicator.textContent = 'AI Thinking...';
+      vsTurnIndicator.className = 'text-[11px] bg-amber-700/60 px-2 py-0.5 rounded-full font-bold ai-thinking';
+      vsTip.textContent = '🤖 AI is calculating the best move...';
+      
+      // Disable player interaction by showing "waiting" state
+      vsPlayerSlots.forEach(slot => { if (slot.children[0]) slot.children[0].style.pointerEvents = 'none'; });
+
+      // Delay AI move for realism
+      setTimeout(() => {
+        vsExecuteAIMove();
+      }, 600 + Math.random() * 400);
+    }
+
+    function vsExecuteAIMove() {
+      if (!vsGameActive || vsAIGame.isGameOver) {
+        vsEndGame();
+        return;
+      }
+
+      const bestMove = AI.findBestMove(vsAIGame);
+      
+      if (bestMove) {
+        // Place the piece on AI board
+        const piece = bestMove.piece;
+        const row = bestMove.row;
+        const col = bestMove.col;
+        
+        for (const [cx, cy] of piece.cells) {
+          vsAIGame.board[row + cy][col + cx] = piece.color;
+        }
+        vsAIGame.activePieces[bestMove.pieceIndex] = null;
+        vsAISlots[bestMove.pieceIndex].innerHTML = '';
+        
+        drawBoardState(vsAIBoard, vsAIGame.board);
+        sfx.playPlace();
+        
+        vsProcessLines('ai');
+        
+        // Check if AI still has pieces or needs new ones
+        const remaining = vsAIGame.activePieces.filter(p => p !== null).length;
+        if (remaining === 0) {
+          vsGenerateSet('ai');
+        } else {
+          vsCheckGameOver('ai');
+        }
+      } else {
+        // AI has no valid moves - this will be caught by checkGameOver
+        vsAIGame.isGameOver = true;
+      }
+
+      // Re-enable player interaction
+      vsPlayerSlots.forEach(slot => { if (slot.children[0]) slot.children[0].style.pointerEvents = 'auto'; });
+
+      // Switch back to player turn
+      vsTurn = 'player';
+      vsWaitingForAI = false;
+      
+      if (!vsGameActive) return;
+
+      // Check if both players are game over
+      if (vsPlayerGame.isGameOver && vsAIGame.isGameOver) {
+        vsEndGame();
+        return;
+      }
+      if (vsPlayerGame.isGameOver) {
+        vsEndGame();
+        return;
+      }
+      if (vsAIGame.isGameOver) {
+        vsEndGame();
+        return;
+      }
+
+      vsTurnIndicator.textContent = 'Your Turn';
+      vsTurnIndicator.className = 'text-[11px] bg-emerald-700/60 px-2 py-0.5 rounded-full font-bold';
+      vsTip.textContent = 'Place a shape, then the AI takes its turn!';
+    }
+
+    function vsEndGame() {
+      vsGameActive = false;
+      vsWaitingForAI = false;
+      vsTurnIndicator.textContent = 'Game Over';
+      vsTurnIndicator.className = 'text-[11px] bg-red-700/60 px-2 py-0.5 rounded-full font-bold';
+
+      const pScore = vsPlayerGame.score;
+      const aScore = vsAIGame.score;
+      let resultMsg, resultIcon, resultTitle;
+
+      let winner = '';
+      // Determine winner: whoever is NOT game over wins, or higher score if both game over
+      if (vsPlayerGame.isGameOver && vsAIGame.isGameOver) {
+        if (pScore > aScore) { winner = 'player'; }
+        else if (aScore > pScore) { winner = 'ai'; }
+        else { winner = 'tie'; }
+      } else if (vsPlayerGame.isGameOver) {
+        winner = 'ai';
+      } else if (vsAIGame.isGameOver) {
+        winner = 'player';
+      } else {
+        // If somehow neither is game over but we're called, compare scores
+        if (pScore > aScore) { winner = 'player'; }
+        else if (aScore > pScore) { winner = 'ai'; }
+        else { winner = 'tie'; }
+      }
+
+      if (winner === 'player') {
+        resultTitle = '🎉 YOU WIN!';
+        resultIcon = '🏆';
+        resultMsg = 'You outlasted the AI! Great strategy!';
+        document.getElementById('vs-result-icon').className = 'w-16 h-16 bg-emerald-500/10 border-2 border-emerald-500/30 text-emerald-500 rounded-full flex items-center justify-center mx-auto mb-1 text-2xl';
+        sfx.playWin();
+      } else if (winner === 'ai') {
+        resultTitle = '🤖 AI WINS';
+        resultIcon = '💻';
+        resultMsg = 'The AI was too strong this time. Try again!';
+        document.getElementById('vs-result-icon').className = 'w-16 h-16 bg-rose-500/10 border-2 border-rose-500/30 text-rose-500 rounded-full flex items-center justify-center mx-auto mb-1 text-2xl';
+        sfx.playLose();
+      } else {
+        resultTitle = '⚖️ IT\'S A TIE!';
+        resultIcon = '🤝';
+        resultMsg = 'Evenly matched! One more round?';
+        document.getElementById('vs-result-icon').className = 'w-16 h-16 bg-amber-500/10 border-2 border-amber-500/30 text-amber-500 rounded-full flex items-center justify-center mx-auto mb-1 text-2xl';
+        sfx.playGameOver();
+      }
+
+      document.getElementById('vs-result-title').textContent = resultTitle;
+      document.getElementById('vs-result-icon').innerHTML = resultIcon;
+      document.getElementById('vs-result-desc').textContent = resultMsg;
+      document.getElementById('vs-result-player').textContent = pScore;
+      document.getElementById('vs-result-ai').textContent = aScore;
+
+      document.getElementById('vs-result-retry').onclick = () => {
+        hideModal('vs-result-modal');
+        vsInit();
+      };
+      document.getElementById('vs-result-menu').onclick = () => {
+        hideModal('vs-result-modal');
+        showScreen('mode-screen');
+      };
+
+      showModal('vs-result-modal');
+    }
+
+    // ========================================================================
+    // UI HELPERS
+    // ========================================================================
+    function showScreen(screenId) {
+      document.getElementById('mode-screen').classList.add('hidden');
+      document.getElementById('solo-ui').classList.add('hidden');
+      document.getElementById('vs-ui').classList.add('hidden');
+      document.getElementById(screenId).classList.remove('hidden');
+    }
+
+    function showModal(id) {
+      const el = document.getElementById(id);
+      el.classList.remove('hidden');
+      setTimeout(() => { el.classList.remove('opacity-0'); el.classList.add('opacity-100'); }, 50);
+    }
+
+    function hideModal(id) {
+      const el = document.getElementById(id);
+      el.classList.remove('opacity-100');
+      el.classList.add('opacity-0');
+      setTimeout(() => el.classList.add('hidden'), 300);
+    }
+
+    // ========================================================================
+    // AUDIO TOGGLE (shared)
+    // ========================================================================
+    function setupAudioToggle(btnId) {
+      document.getElementById(btnId).addEventListener('click', () => {
+        sfx.init();
+        sfx.muted = !sfx.muted;
+        const btn = document.getElementById(btnId);
+        if (sfx.muted) {
+          btn.textContent = '🔇 Sound Off';
+          btn.className = "px-2 py-1 bg-slate-800/40 hover:bg-slate-700/40 border border-slate-700 text-slate-400 rounded-full transition-all text-[11px] flex items-center justify-center gap-1";
+        } else {
+          btn.textContent = '🔊 Sound On';
+          btn.className = "px-2 py-1 bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700 rounded-full transition-all text-[11px] flex items-center justify-center gap-1";
+        }
+      });
+    }
+
+    // ========================================================================
+    // EVENT BINDINGS
+    // ========================================================================
+    // Mode selection
+    document.getElementById('btn-solo').addEventListener('click', () => {
+      showScreen('solo-ui');
+      soloInit();
+    });
+    document.getElementById('btn-vs-ai').addEventListener('click', () => {
+      showScreen('vs-ui');
+      vsInit();
+    });
+    document.getElementById('solo-back').addEventListener('click', () => {
+      showScreen('mode-screen');
+    });
+    document.getElementById('vs-back').addEventListener('click', () => {
+      vsGameActive = false;
+      showScreen('mode-screen');
     });
 
-    domBtnRestart.addEventListener('click', initGame);
+    // Audio toggles
+    setupAudioToggle('solo-audio-toggle');
+    setupAudioToggle('vs-audio-toggle');
+    document.getElementById('solo-high').textContent = highScore;
 
-    window.onload = function () {
-      initGame();
-    }
+    // Show mode screen initially
+    showScreen('mode-screen');
   </script>
 </body>
 </html>
-
-
