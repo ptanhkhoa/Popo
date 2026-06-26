@@ -1,0 +1,1079 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>PoPo - Solo & VS AI</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Outfit', sans-serif;
+      touch-action: none;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+      -webkit-user-select: none;
+      background: radial-gradient(circle at center, #1e1b4b 0%, #0f172a 100%);
+      overflow: hidden;
+    }
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+    }
+    .board-grid {
+      display: grid;
+      grid-template-columns: repeat(8, minmax(0, 1fr));
+      grid-template-rows: repeat(8, minmax(0, 1fr));
+    }
+    @keyframes popIn {
+      0% { transform: scale(0.8); opacity: 0; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+    .animate-pop {
+      animation: popIn 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+    }
+    @keyframes pulseGlow {
+      0%, 100% { box-shadow: 0 0 4px rgba(168, 85, 247, 0.4); }
+      50% { box-shadow: 0 0 16px rgba(168, 85, 247, 0.8); }
+    }
+    .pulse-glow {
+      animation: pulseGlow 1.5s infinite;
+    }
+    .shake {
+      animation: shakeAnim 0.2s cubic-bezier(.36,.07,.19,.97) both;
+      transform: translate3d(0, 0, 0);
+    }
+    @keyframes shakeAnim {
+      10%, 90% { transform: translate3d(-2px, 0, 0); }
+      20%, 80% { transform: translate3d(4px, 0, 0); }
+      30%, 50%, 70% { transform: translate3d(-6px, 0, 0); }
+      40%, 60% { transform: translate3d(6px, 0, 0); }
+    }
+    #particles-canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 30;
+    }
+    .dragging-preview {
+      opacity: 0.95;
+      transform: scale(1.02);
+      box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.7), 0 8px 10px -6px rgb(0 0 0 / 0.7);
+    }
+    .mode-btn {
+      transition: all 0.2s ease;
+    }
+    .mode-btn:hover {
+      transform: scale(1.03);
+    }
+    .mode-btn:active {
+      transform: scale(0.97);
+    }
+    .vs-board-container {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      max-width: 500px;
+      width: 100%;
+    }
+    .vs-board-wrapper {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+    }
+    .vs-board-wrapper .board-grid {
+      width: 100%;
+      aspect-ratio: 1;
+    }
+    .ai-thinking {
+      animation: pulseThink 1s infinite;
+    }
+    @keyframes pulseThink {
+      0%, 100% { opacity: 0.6; }
+      50% { opacity: 1; }
+    }
+    .vs-scroll {
+      max-height: 100vh;
+      overflow-y: auto;
+    }
+    .vs-scroll::-webkit-scrollbar {
+      width: 4px;
+    }
+    .vs-scroll::-webkit-scrollbar-thumb {
+      background: #334155;
+      border-radius: 2px;
+    }
+  </style>
+</head>
+<body class="flex flex-col items-center justify-start min-h-screen text-white p-2 md:p-4 overflow-hidden gap-2">
+
+  <canvas id="particles-canvas"></canvas>
+
+  <!-- MODE SELECTION SCREEN -->
+  <div id="mode-screen" class="flex flex-col items-center justify-center w-full max-w-sm min-h-screen gap-6 z-20">
+    <div class="text-center space-y-2">
+      <span class="text-6xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-cyan-400 via-indigo-400 to-purple-400">POPO</span>
+      <p class="text-slate-400 text-sm">Block Puzzle Challenge</p>
+    </div>
+    <div class="flex flex-col gap-4 w-full px-6">
+      <button id="btn-solo" class="mode-btn w-full bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white font-bold py-4 px-6 rounded-xl shadow-lg shadow-indigo-500/20 text-lg tracking-wide">
+        🎮 SOLO MODE
+      </button>
+      <button id="btn-vs-ai" class="mode-btn w-full bg-gradient-to-r from-amber-500 to-rose-600 hover:from-amber-600 hover:to-rose-700 text-white font-bold py-4 px-6 rounded-xl shadow-lg shadow-amber-500/20 text-lg tracking-wide">
+        🤖 VS AI MODE
+      </button>
+    </div>
+    <div class="text-slate-500 text-xs text-center px-6 mt-2">
+      <p>In VS AI, you and the AI take turns placing shapes.<br>The last player with valid moves wins!</p>
+    </div>
+  </div>
+
+  <!-- SOLO MODE UI -->
+  <div id="solo-ui" class="hidden w-full max-w-sm flex flex-col items-center gap-2 mt-1 z-10">
+    <header class="w-full flex flex-col items-center gap-1.5">
+      <div class="flex justify-between items-center w-full px-1">
+        <div class="flex items-center gap-2">
+          <button id="solo-back" class="text-slate-400 hover:text-white text-lg transition-colors">←</button>
+          <span class="text-2xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-cyan-400 via-indigo-400 to-purple-400">SOLO</span>
+          <span id="solo-rescue-pill" class="hidden text-[10px] bg-red-500/80 border border-red-400 text-white px-2 py-0.5 rounded-full font-bold animate-pulse">RESCUE ON</span>
+        </div>
+        <button id="solo-audio-toggle" class="px-2 py-1 bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700 rounded-full transition-all text-[11px] flex items-center justify-center gap-1">
+          🔊 Sound On
+        </button>
+      </div>
+      <div class="grid grid-cols-3 gap-2 w-full">
+        <div class="bg-slate-900/60 border border-slate-800 backdrop-blur-md rounded-xl p-1.5 text-center flex flex-col justify-center">
+          <span class="text-slate-400 text-[9px] font-semibold uppercase tracking-wider">Score</span>
+          <span id="solo-score" class="text-lg font-extrabold text-cyan-300">0</span>
+        </div>
+        <div class="bg-slate-900/60 border border-slate-800 backdrop-blur-md rounded-xl p-1.5 text-center flex flex-col justify-center relative overflow-hidden">
+          <span class="text-slate-400 text-[9px] font-semibold uppercase tracking-wider">Combo</span>
+          <span id="solo-combo" class="text-lg font-extrabold text-amber-400">x1</span>
+          <div id="solo-combo-bar" class="absolute bottom-0 left-0 h-0.5 bg-amber-500 transition-all duration-300" style="width: 0%"></div>
+        </div>
+        <div class="bg-slate-900/60 border border-slate-800 backdrop-blur-md rounded-xl p-1.5 text-center flex flex-col justify-center">
+          <span class="text-slate-400 text-[9px] font-semibold uppercase tracking-wider">Best</span>
+          <span id="solo-high" class="text-lg font-extrabold text-purple-400">0</span>
+        </div>
+      </div>
+    </header>
+    <section class="w-full">
+      <div id="solo-tray" class="bg-slate-900/40 border border-slate-800/50 backdrop-blur-lg rounded-2xl p-2 w-full flex justify-around items-center min-h-[76px] gap-2 shadow-inner">
+        <div id="solo-slot-0" class="flex items-center justify-center w-16 h-16 relative"></div>
+        <div id="solo-slot-1" class="flex items-center justify-center w-16 h-16 relative"></div>
+        <div id="solo-slot-2" class="flex items-center justify-center w-16 h-16 relative"></div>
+      </div>
+    </section>
+    <main class="w-full flex flex-col items-center justify-center">
+      <div id="solo-board-container" class="relative w-full max-w-[280px] aspect-square bg-slate-950/80 border-4 border-slate-800/80 rounded-2xl p-1.5 shadow-2xl transition-all duration-150">
+        <div id="solo-board" class="board-grid w-full h-full gap-1"></div>
+      </div>
+    </main>
+    <div class="text-center mt-0">
+      <p id="solo-tip" class="text-slate-400 text-[10px] font-medium">Drag shapes from the top tray onto the board!</p>
+    </div>
+  </div>
+
+  <!-- VS AI MODE UI -->
+  <div id="vs-ui" class="hidden w-full max-w-md flex flex-col items-center gap-1 z-10 vs-scroll" style="max-height: 100dvh;">
+    <header class="w-full flex justify-between items-center px-1">
+      <button id="vs-back" class="text-slate-400 hover:text-white text-lg transition-colors">←</button>
+      <div class="flex items-center gap-2">
+        <span class="text-xl font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-amber-400 to-rose-500">VS AI</span>
+        <span id="vs-turn-indicator" class="text-[11px] bg-slate-700/60 px-2 py-0.5 rounded-full font-bold">Your Turn</span>
+      </div>
+      <button id="vs-audio-toggle" class="px-2 py-1 bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700 rounded-full transition-all text-[11px] flex items-center justify-center gap-1">
+        🔊 Sound On
+      </button>
+    </header>
+    <div class="vs-board-container w-full">
+      <div class="vs-board-wrapper">
+        <div class="flex items-center gap-1">
+          <span class="text-[10px] text-slate-400 font-semibold">🤖 AI</span>
+          <span id="vs-ai-score" class="text-xs font-bold text-rose-400">0</span>
+        </div>
+        <div id="vs-ai-board-container" class="relative w-full aspect-square bg-slate-950/80 border-2 border-slate-700/80 rounded-xl p-1 shadow-lg">
+          <div id="vs-ai-board" class="board-grid w-full h-full gap-0.5"></div>
+        </div>
+        <div id="vs-ai-tray" class="bg-slate-900/40 border border-slate-800/50 rounded-xl p-1 w-full flex justify-around items-center min-h-[44px] gap-1 shadow-inner">
+          <div id="vs-ai-slot-0" class="flex items-center justify-center w-10 h-10 relative"></div>
+          <div id="vs-ai-slot-1" class="flex items-center justify-center w-10 h-10 relative"></div>
+          <div id="vs-ai-slot-2" class="flex items-center justify-center w-10 h-10 relative"></div>
+        </div>
+      </div>
+      <div class="vs-board-wrapper">
+        <div class="flex items-center gap-1">
+          <span class="text-[10px] text-slate-400 font-semibold">🧑 You</span>
+          <span id="vs-player-score" class="text-xs font-bold text-cyan-300">0</span>
+        </div>
+        <div id="vs-player-board-container" class="relative w-full aspect-square bg-slate-950/80 border-2 border-slate-700/80 rounded-xl p-1 shadow-lg">
+          <div id="vs-player-board" class="board-grid w-full h-full gap-0.5"></div>
+        </div>
+        <div id="vs-player-tray" class="bg-slate-900/40 border border-slate-800/50 rounded-xl p-1 w-full flex justify-around items-center min-h-[44px] gap-1 shadow-inner">
+          <div id="vs-player-slot-0" class="flex items-center justify-center w-10 h-10 relative"></div>
+          <div id="vs-player-slot-1" class="flex items-center justify-center w-10 h-10 relative"></div>
+          <div id="vs-player-slot-2" class="flex items-center justify-center w-10 h-10 relative"></div>
+        </div>
+      </div>
+    </div>
+    <div class="text-center mt-0">
+      <p id="vs-tip" class="text-slate-400 text-[9px] font-medium">Place a shape, then the AI takes its turn!</p>
+    </div>
+  </div>
+
+  <!-- Drag Ghost -->
+  <div id="drag-ghost" class="fixed pointer-events-none z-50 hidden transition-transform duration-75 origin-center"></div>
+
+  <!-- Game Over Modal (Solo) -->
+  <div id="game-over-modal" class="fixed inset-0 bg-slate-950/95 backdrop-blur-md flex flex-col items-center justify-center p-6 z-40 hidden opacity-0 transition-opacity duration-300">
+    <div class="max-w-xs w-full text-center space-y-4 animate-pop">
+      <div id="modal-icon" class="w-16 h-16 bg-red-500/10 border-2 border-red-500/30 text-red-500 rounded-full flex items-center justify-center mx-auto mb-1 text-2xl">💀</div>
+      <h2 id="modal-title" class="text-3xl font-extrabold tracking-tight bg-gradient-to-b from-white to-slate-400 bg-clip-text text-transparent">NO MOVES</h2>
+      <p id="modal-desc" class="text-slate-400 text-xs">The grid is too cluttered and none of your shapes fit.</p>
+      <div class="bg-slate-900/60 border border-slate-800 p-3 rounded-xl space-y-2">
+        <div class="flex justify-between items-center text-xs">
+          <span class="text-slate-400">Final Score</span>
+          <span id="modal-score" class="text-xl font-bold text-cyan-300">0</span>
+        </div>
+        <div class="flex justify-between items-center text-xs border-t border-slate-800 pt-2">
+          <span class="text-slate-400">High Score</span>
+          <span id="modal-high" class="text-lg font-bold text-purple-400">0</span>
+        </div>
+      </div>
+      <div class="flex flex-col gap-2">
+        <button id="modal-retry" class="w-full bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white font-bold py-3 px-6 rounded-xl shadow-lg shadow-indigo-500/20 active:scale-95 transition-all text-sm tracking-wide">TRY AGAIN</button>
+        <button id="modal-menu" class="w-full bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold py-2 px-6 rounded-xl border border-slate-700 active:scale-95 transition-all text-sm">MAIN MENU</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- VS Result Modal -->
+  <div id="vs-result-modal" class="fixed inset-0 bg-slate-950/95 backdrop-blur-md flex flex-col items-center justify-center p-6 z-40 hidden opacity-0 transition-opacity duration-300">
+    <div class="max-w-xs w-full text-center space-y-4 animate-pop">
+      <div id="vs-result-icon" class="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-1 text-2xl"></div>
+      <h2 id="vs-result-title" class="text-3xl font-extrabold tracking-tight bg-gradient-to-b from-white to-slate-400 bg-clip-text text-transparent">GAME OVER</h2>
+      <p id="vs-result-desc" class="text-slate-400 text-xs"></p>
+      <div class="bg-slate-900/60 border border-slate-800 p-3 rounded-xl space-y-2">
+        <div class="flex justify-between items-center text-xs">
+          <span class="text-slate-400">🧑 Your Score</span>
+          <span id="vs-result-player" class="text-lg font-bold text-cyan-300">0</span>
+        </div>
+        <div class="flex justify-between items-center text-xs border-t border-slate-800 pt-2">
+          <span class="text-slate-400">🤖 AI Score</span>
+          <span id="vs-result-ai" class="text-lg font-bold text-rose-400">0</span>
+        </div>
+      </div>
+      <div class="flex flex-col gap-2">
+        <button id="vs-result-retry" class="w-full bg-gradient-to-r from-amber-500 to-rose-600 hover:from-amber-600 hover:to-rose-700 text-white font-bold py-3 px-6 rounded-xl shadow-lg shadow-amber-500/20 active:scale-95 transition-all text-sm tracking-wide">PLAY AGAIN</button>
+        <button id="vs-result-menu" class="w-full bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold py-2 px-6 rounded-xl border border-slate-700 active:scale-95 transition-all text-sm">MAIN MENU</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ========================================================================
+    // AUDIO
+    // ========================================================================
+    class SoundController {
+      constructor() { this.ctx = null; this.muted = false; }
+      init() { if (!this.ctx) this.ctx = new (window.AudioContext || window.webkitAudioContext)(); }
+      playPlace() {
+        if (this.muted) return; this.init();
+        const o = this.ctx.createOscillator(), g = this.ctx.createGain();
+        o.connect(g); g.connect(this.ctx.destination);
+        o.type = 'sine'; o.frequency.setValueAtTime(300, this.ctx.currentTime);
+        o.frequency.exponentialRampToValueAtTime(150, this.ctx.currentTime + 0.15);
+        g.gain.setValueAtTime(0.15, this.ctx.currentTime);
+        g.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.15);
+        o.start(); o.stop(this.ctx.currentTime + 0.15);
+      }
+      playClear(n = 1) {
+        if (this.muted) return; this.init(); const now = this.ctx.currentTime;
+        for (let i = 0; i < n; i++) {
+          const o = this.ctx.createOscillator(), g = this.ctx.createGain();
+          o.connect(g); g.connect(this.ctx.destination); o.type = 'triangle';
+          const f = 261.63 * [1, 1.25, 1.5, 1.875, 2][Math.min(i, 4)];
+          o.frequency.setValueAtTime(f, now + i * 0.08);
+          o.frequency.exponentialRampToValueAtTime(f * 2, now + i * 0.08 + 0.25);
+          g.gain.setValueAtTime(0.12, now + i * 0.08);
+          g.gain.exponentialRampToValueAtTime(0.01, now + i * 0.08 + 0.3);
+          o.start(now + i * 0.08); o.stop(now + i * 0.08 + 0.3);
+        }
+      }
+      playComboMax() {
+        if (this.muted) return; this.init();
+        const o = this.ctx.createOscillator(), g = this.ctx.createGain();
+        o.connect(g); g.connect(this.ctx.destination); o.type = 'sawtooth';
+        o.frequency.setValueAtTime(180, this.ctx.currentTime);
+        o.frequency.exponentialRampToValueAtTime(880, this.ctx.currentTime + 0.45);
+        g.gain.setValueAtTime(0.1, this.ctx.currentTime);
+        g.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.45);
+        o.start(); o.stop(this.ctx.currentTime + 0.45);
+      }
+      playGameOver() {
+        if (this.muted) return; this.init();
+        const o = this.ctx.createOscillator(), g = this.ctx.createGain();
+        o.connect(g); g.connect(this.ctx.destination); o.type = 'triangle';
+        o.frequency.setValueAtTime(220, this.ctx.currentTime);
+        o.frequency.linearRampToValueAtTime(80, this.ctx.currentTime + 0.8);
+        g.gain.setValueAtTime(0.2, this.ctx.currentTime);
+        g.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.8);
+        o.start(); o.stop(this.ctx.currentTime + 0.8);
+      }
+      playWin() {
+        if (this.muted) return; this.init(); const now = this.ctx.currentTime;
+        [523.25, 659.25, 783.99, 1046.5].forEach((f, i) => {
+          const o = this.ctx.createOscillator(), g = this.ctx.createGain();
+          o.connect(g); g.connect(this.ctx.destination); o.type = 'square';
+          o.frequency.setValueAtTime(f, now + i * 0.12);
+          g.gain.setValueAtTime(0.08, now + i * 0.12);
+          g.gain.exponentialRampToValueAtTime(0.01, now + i * 0.12 + 0.25);
+          o.start(now + i * 0.12); o.stop(now + i * 0.12 + 0.25);
+        });
+      }
+      playLose() {
+        if (this.muted) return; this.init();
+        const o = this.ctx.createOscillator(), g = this.ctx.createGain();
+        o.connect(g); g.connect(this.ctx.destination); o.type = 'sawtooth';
+        o.frequency.setValueAtTime(400, this.ctx.currentTime);
+        o.frequency.linearRampToValueAtTime(100, this.ctx.currentTime + 0.6);
+        g.gain.setValueAtTime(0.1, this.ctx.currentTime);
+        g.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.6);
+        o.start(); o.stop(this.ctx.currentTime + 0.6);
+      }
+    }
+    const sfx = new SoundController();
+
+    // ========================================================================
+    // COLORS & SHAPES
+    // ========================================================================
+    const COLORS = {
+      cyan: { fill: '#06b6d4', border: '#0891b2', glow: 'rgba(6, 182, 212, 0.5)' },
+      blue: { fill: '#3b82f6', border: '#2563eb', glow: 'rgba(59, 130, 246, 0.5)' },
+      purple: { fill: '#a855f7', border: '#9333ea', glow: 'rgba(168, 85, 247, 0.5)' },
+      pink: { fill: '#ec4899', border: '#db2777', glow: 'rgba(236, 72, 153, 0.5)' },
+      emerald: { fill: '#10b981', border: '#059669', glow: 'rgba(16, 185, 129, 0.5)' },
+      amber: { fill: '#f59e0b', border: '#d97706', glow: 'rgba(245, 158, 11, 0.5)' },
+      rose: { fill: '#f43f5e', border: '#e11d48', glow: 'rgba(244, 63, 94, 0.5)' }
+    };
+
+    const ALL_SHAPES = [
+      { id: 'I_h', size: [4, 1], cells: [[0,0],[1,0],[2,0],[3,0]], color: 'cyan' },
+      { id: 'I_v', size: [1, 4], cells: [[0,0],[0,1],[0,2],[0,3]], color: 'cyan' },
+      { id: 'O', size: [2, 2], cells: [[0,0],[1,0],[0,1],[1,1]], color: 'blue' },
+      { id: 'T_0', size: [3, 2], cells: [[0,0],[1,0],[2,0],[1,1]], color: 'purple' },
+      { id: 'T_1', size: [2, 3], cells: [[1,0],[0,1],[1,1],[1,2]], color: 'purple' },
+      { id: 'T_2', size: [3, 2], cells: [[1,0],[0,1],[1,1],[2,1]], color: 'purple' },
+      { id: 'T_3', size: [2, 3], cells: [[0,0],[0,1],[1,1],[0,2]], color: 'purple' },
+      { id: 'L_0', size: [2, 3], cells: [[0,0],[0,1],[0,2],[1,2]], color: 'pink' },
+      { id: 'L_1', size: [3, 2], cells: [[0,1],[1,1],[2,1],[0,0]], color: 'pink' },
+      { id: 'L_2', size: [2, 3], cells: [[0,0],[1,0],[1,1],[1,2]], color: 'pink' },
+      { id: 'L_3', size: [3, 2], cells: [[0,0],[1,0],[2,0],[2,1]], color: 'pink' },
+      { id: 'J_0', size: [2, 3], cells: [[1,0],[1,1],[0,2],[1,2]], color: 'pink' },
+      { id: 'J_1', size: [3, 2], cells: [[0,0],[0,1],[1,1],[2,1]], color: 'pink' },
+      { id: 'J_2', size: [2, 3], cells: [[0,0],[1,0],[0,1],[0,2]], color: 'pink' },
+      { id: 'J_3', size: [3, 2], cells: [[0,0],[1,0],[2,0],[2,1]], color: 'pink' },
+      { id: 'S', size: [3, 2], cells: [[1,0],[2,0],[0,1],[1,1]], color: 'emerald' },
+      { id: 'Z', size: [3, 2], cells: [[0,0],[1,0],[1,1],[2,1]], color: 'emerald' },
+      { id: '3_line_h', size: [3, 1], cells: [[0,0],[1,0],[2,0]], color: 'amber' },
+      { id: '3_line_v', size: [1, 3], cells: [[0,0],[0,1],[0,2]], color: 'amber' },
+      { id: '3_corner_0', size: [2, 2], cells: [[0,0],[1,0],[0,1]], color: 'rose' },
+      { id: '3_corner_1', size: [2, 2], cells: [[0,0],[1,0],[1,1]], color: 'rose' },
+      { id: '3_corner_2', size: [2, 2], cells: [[0,1],[1,1],[0,0]], color: 'rose' },
+      { id: '3_corner_3', size: [2, 2], cells: [[0,1],[1,1],[1,0]], color: 'rose' },
+      { id: '2_line_h', size: [2, 1], cells: [[0,0],[1,0]], color: 'emerald' },
+      { id: '2_line_v', size: [1, 2], cells: [[0,0],[0,1]], color: 'emerald' },
+      { id: '1_single', size: [1, 1], cells: [[0,0]], color: 'cyan' }
+    ];
+
+    // ========================================================================
+    // GAME STATE CLASS
+    // ========================================================================
+    class GameState {
+      constructor() {
+        this.board = Array(8).fill(null).map(() => Array(8).fill(null));
+        this.score = 0;
+        this.combo = 0;
+        this.comboTimer = null;
+        this.activePieces = [null, null, null];
+        this.isGameOver = false;
+      }
+      cloneBoard() { return this.board.map(r => [...r]); }
+      analyzeBoardDifficulty() {
+        let empty = 0, holes = 0;
+        const g = [];
+        for (let r = 0; r < 8; r++) {
+          g[r] = [];
+          for (let c = 0; c < 8; c++) { g[r][c] = this.board[r][c] !== null; if (!g[r][c]) empty++; }
+        }
+        for (let r = 0; r < 8; r++)
+          for (let c = 0; c < 8; c++)
+            if (!g[r][c] && (r===0||g[r-1][c]) && (r===7||g[r+1][c]) && (c===0||g[r][c-1]) && (c===7||g[r][c+1])) holes++;
+        return { isDangerous: empty < 22 || holes >= 3, emptyCells: empty, isolatedHoles: holes };
+      }
+      pickRandomShape() {
+        const s = this.analyzeBoardDifficulty();
+        let p4=50,p3=25,p2=15,p1=10;
+        if (s.isDangerous) { p4=20;p3=20;p2=35;p1=25; }
+        const roll = Math.random() * (p4+p3+p2+p1);
+        let sz = roll < p4 ? 4 : roll < p4+p3 ? 3 : roll < p4+p3+p2 ? 2 : 1;
+        const vars = ALL_SHAPES.filter(x => x.cells.length === sz);
+        return JSON.parse(JSON.stringify(vars[Math.floor(Math.random() * vars.length)]));
+      }
+      canPlaceAt(shape, r, c) {
+        for (const [cx, cy] of shape.cells) {
+          const br = r + cy, bc = c + cx;
+          if (br < 0 || br >= 8 || bc < 0 || bc >= 8 || this.board[br][bc] !== null) return false;
+        }
+        return true;
+      }
+      canPlaceShapeSomewhere(shape) {
+        if (!shape) return false;
+        for (let r = 0; r <= 8 - shape.size[1]; r++)
+          for (let c = 0; c <= 8 - shape.size[0]; c++)
+            if (this.canPlaceAt(shape, r, c)) return true;
+        return false;
+      }
+      hasAnyValidMove() {
+        for (const p of this.activePieces) if (p && this.canPlaceShapeSomewhere(p)) return true;
+        return false;
+      }
+      processLines() {
+        const rows = [], cols = [];
+        for (let r = 0; r < 8; r++) if (this.board[r].every(c => c !== null)) rows.push(r);
+        for (let c = 0; c < 8; c++) { let f = true; for (let r = 0; r < 8; r++) { if (this.board[r][c] === null) { f = false; break; } } if (f) cols.push(c); }
+        const total = rows.length + cols.length;
+        if (total > 0) {
+          this.combo++;
+          let base = 100; if (total === 2) base = 300; else if (total === 3) base = 600; else if (total >= 4) base = 1000;
+          this.score += base * this.combo;
+          rows.forEach(r => { for (let c = 0; c < 8; c++) this.board[r][c] = null; });
+          cols.forEach(c => { for (let r = 0; r < 8; r++) this.board[r][c] = null; });
+        } else { if (this.combo > 1) this.combo--; else this.combo = 0; }
+        return total;
+      }
+      simulatePlacement(shape, r, c) {
+        const b = this.cloneBoard();
+        for (const [cx, cy] of shape.cells) b[r+cy][c+cx] = true;
+        let lines = 0;
+        for (let rr = 0; rr < 8; rr++) if (b[rr].every(cc => cc !== null)) lines++;
+        for (let cc = 0; cc < 8; cc++) { let f = true; for (let rr = 0; rr < 8; rr++) { if (b[rr][cc] === null) { f = false; break; } } if (f) lines++; }
+        return lines;
+      }
+      generateNextSet() {
+        const stats = this.analyzeBoardDifficulty();
+        let generated = [], success = false, attempts = 0;
+        while (!success && attempts < 50) {
+          generated = [this.pickRandomShape(), this.pickRandomShape(), this.pickRandomShape()];
+          for (let i = 0; i < 3; i++) { if (this.canPlaceShapeSomewhere(generated[i])) { success = true; break; } }
+          attempts++;
+        }
+        if (!success) generated[Math.floor(Math.random() * 3)] = JSON.parse(JSON.stringify(ALL_SHAPES.find(s => s.cells.length === 1)));
+        this.activePieces = generated;
+      }
+      checkGameOver() { if (!this.hasAnyValidMove()) { this.isGameOver = true; return true; } return false; }
+    }
+
+    // ========================================================================
+    // AI ENGINE
+    // ========================================================================
+    const AI = {
+      findBestMove(gameState) {
+        const pieces = gameState.activePieces.filter(p => p !== null);
+        let best = null, bestScore = -Infinity;
+        for (let pi = 0; pi < pieces.length; pi++) {
+          const piece = pieces[pi], moves = this.getAllValidMoves(gameState, piece);
+          for (const m of moves) {
+            const score = this.evaluateMove(gameState, piece, m.row, m.col, pi);
+            if (score > bestScore) { bestScore = score; best = { pieceIndex: pi, row: m.row, col: m.col, piece }; }
+          }
+        }
+        return best;
+      },
+      getAllValidMoves(gameState, shape) {
+        const moves = [];
+        for (let r = 0; r <= 8 - shape.size[1]; r++)
+          for (let c = 0; c <= 8 - shape.size[0]; c++)
+            if (gameState.canPlaceAt(shape, r, c)) moves.push({ row: r, col: c });
+        return moves;
+      },
+      evaluateMove(gameState, shape, row, col, pieceIndex) {
+        const linesCleared = gameState.simulatePlacement(shape, row, col);
+        const simBoard = gameState.cloneBoard();
+        for (const [cx, cy] of shape.cells) simBoard[row+cy][col+cx] = true;
+        const clearedRows = [], clearedCols = [];
+        for (let r = 0; r < 8; r++) if (simBoard[r].every(c => c !== null)) clearedRows.push(r);
+        for (let c = 0; c < 8; c++) { let f = true; for (let r = 0; r < 8; r++) { if (simBoard[r][c] === null) { f = false; break; } } if (f) clearedCols.push(c); }
+        clearedRows.forEach(r => { for (let c = 0; c < 8; c++) simBoard[r][c] = null; });
+        clearedCols.forEach(c => { for (let r = 0; r < 8; r++) simBoard[r][c] = null; });
+        let followUp = 0;
+        const remaining = gameState.activePieces.filter((p, i) => i !== pieceIndex && p !== null);
+        for (const rp of remaining) {
+          let bestFU = 0;
+          for (let r = 0; r <= 8 - rp.size[1]; r++) {
+            for (let c = 0; c <= 8 - rp.size[0]; c++) {
+              let valid = true;
+              for (const [cx, cy] of rp.cells) { const tr = r+cy, tc = c+cx; if (tr<0||tr>=8||tc<0||tc>=8||simBoard[tr][tc]!==null) { valid=false; break; } }
+              if (valid) {
+                const tb = simBoard.map(rr => [...rr]);
+                for (const [cx, cy] of rp.cells) tb[r+cy][c+cx] = true;
+                let fl = 0;
+                for (let rr = 0; rr < 8; rr++) if (tb[rr].every(cc => cc !== null)) fl++;
+                for (let cc = 0; cc < 8; cc++) { let f = true; for (let rr = 0; rr < 8; rr++) { if (tb[rr][cc] === null) { f = false; break; } } if (f) fl++; }
+                if (fl > bestFU) bestFU = fl;
+              }
+            }
+          }
+          followUp += bestFU;
+        }
+        let score = linesCleared * 1000 + followUp * 300;
+        if (linesCleared >= 2) score += 2000;
+        if (linesCleared >= 3) score += 5000;
+        if (linesCleared >= 4) score += 10000;
+        const dist = Math.abs(row + shape.size[1]/2 - 3.5) + Math.abs(col + shape.size[0]/2 - 3.5);
+        score -= dist * 5;
+        let emptyN = 0;
+        for (const [cx, cy] of shape.cells) {
+          const br = row+cy, bc = col+cx;
+          [[-1,0],[1,0],[0,-1],[0,1]].forEach(([dr, dc]) => {
+            const nr = br+dr, nc = bc+dc;
+            if (nr>=0 && nr<8 && nc>=0 && nc<8 && gameState.board[nr][nc]===null) emptyN++;
+          });
+        }
+        score += emptyN * 2;
+        const fill = gameState.board.flat().filter(c => c !== null).length;
+        if (fill > 50) score += (4 - shape.cells.length) * 50;
+        return score;
+      }
+    };
+
+    // ========================================================================
+    // RENDER HELPERS
+    // ========================================================================
+    function buildBoardUI(el) {
+      el.innerHTML = '';
+      for (let r = 0; r < 8; r++) for (let c = 0; c < 8; c++) {
+        const cell = document.createElement('div');
+        cell.dataset.row = r; cell.dataset.col = c;
+        cell.className = 'w-full h-full bg-slate-900/60 border border-slate-800/80 rounded-md transition-all duration-200 relative overflow-hidden';
+        const inner = document.createElement('div');
+        inner.className = 'absolute inset-[2px] bg-slate-950/20 rounded-sm';
+        cell.appendChild(inner); el.appendChild(cell);
+      }
+    }
+    function drawBoardState(el, data) {
+      const cells = el.children;
+      for (let r = 0; r < 8; r++) for (let c = 0; c < 8; c++) {
+        const idx = r * 8 + c, cell = cells[idx], val = data[r][c];
+        cell.style.backgroundColor = ''; cell.style.borderColor = ''; cell.style.boxShadow = '';
+        if (val) {
+          const cfg = COLORS[val];
+          cell.style.backgroundColor = cfg.fill; cell.style.borderColor = cfg.border;
+          cell.style.boxShadow = 'inset 0 1.5px 3px rgba(255,255,255,0.2), 0 1.5px 3px rgba(0,0,0,0.3)';
+        }
+      }
+    }
+    function renderPieceInSlot(slotEl, piece, cellSize = 14) {
+      slotEl.innerHTML = '';
+      if (!piece) return;
+      const c = document.createElement('div');
+      c.className = 'grid gap-0.5 animate-pop relative';
+      c.style.gridTemplateColumns = `repeat(${piece.size[0]}, ${cellSize}px)`;
+      c.style.gridTemplateRows = `repeat(${piece.size[1]}, ${cellSize}px)`;
+      const gm = Array(piece.size[1]).fill(0).map(() => Array(piece.size[0]).fill(false));
+      piece.cells.forEach(([cx, cy]) => { gm[cy][cx] = true; });
+      for (let y = 0; y < piece.size[1]; y++) for (let x = 0; x < piece.size[0]; x++) {
+        const b = document.createElement('div');
+        b.className = `w-[${cellSize}px] h-[${cellSize}px] rounded-sm`;
+        if (gm[y][x]) { const cfg = COLORS[piece.color]; b.style.backgroundColor = cfg.fill; b.style.borderColor = cfg.border; b.style.borderWidth = '1px'; b.style.boxShadow = 'inset 0 1px 1px rgba(255,255,255,0.2)'; }
+        else b.style.opacity = '0';
+        c.appendChild(b);
+      }
+      slotEl.appendChild(c);
+    }
+    function renderAIPieceInSlot(slotEl, piece, cellSize = 10) {
+      slotEl.innerHTML = '';
+      if (!piece) return;
+      const c = document.createElement('div');
+      c.className = 'grid gap-0.5 relative';
+      c.style.gridTemplateColumns = `repeat(${piece.size[0]}, ${cellSize}px)`;
+      c.style.gridTemplateRows = `repeat(${piece.size[1]}, ${cellSize}px)`;
+      const gm = Array(piece.size[1]).fill(0).map(() => Array(piece.size[0]).fill(false));
+      piece.cells.forEach(([cx, cy]) => { gm[cy][cx] = true; });
+      for (let y = 0; y < piece.size[1]; y++) for (let x = 0; x < piece.size[0]; x++) {
+        const b = document.createElement('div');
+        b.className = `w-[${cellSize}px] h-[${cellSize}px] rounded-sm`;
+        if (gm[y][x]) { const cfg = COLORS[piece.color]; b.style.backgroundColor = cfg.fill; b.style.borderColor = cfg.border; b.style.borderWidth = '1px'; b.style.boxShadow = 'inset 0 1px 1px rgba(255,255,255,0.2)'; }
+        else b.style.opacity = '0';
+        c.appendChild(b);
+      }
+      slotEl.appendChild(c);
+    }
+
+    // ========================================================================
+    // PARTICLE SYSTEM
+    // ========================================================================
+    const canvas = document.getElementById('particles-canvas'), ctx = canvas.getContext('2d');
+    let particles = [];
+    function resizeCanvas() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+    window.addEventListener('resize', resizeCanvas); resizeCanvas();
+    class Particle {
+      constructor(x, y, color) { this.x = x; this.y = y; this.size = Math.random() * 4 + 3; this.speedX = (Math.random() - 0.5) * 12; this.speedY = (Math.random() - 0.5) * 12; this.gravity = 0.15; this.color = color; this.alpha = 1; this.decay = Math.random() * 0.02 + 0.015; }
+      update() { this.x += this.speedX; this.y += this.speedY; this.speedY += this.gravity; this.alpha -= this.decay; }
+      draw() { ctx.save(); ctx.globalAlpha = this.alpha; ctx.fillStyle = this.color; ctx.beginPath(); ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2); ctx.fill(); if (this.size > 5) { ctx.shadowBlur = 10; ctx.shadowColor = this.color; } ctx.restore(); }
+    }
+    function spawnBurst(x, y, color) { for (let i = 0; i < 8; i++) particles.push(new Particle(x, y, color)); }
+    function triggerClearingVFX(boardEl, rows, cols, comboCount) {
+      const rect = boardEl.getBoundingClientRect(), pad = 4, cw = boardEl.children[0].offsetWidth || 30;
+      const colors = ['#06b6d4','#a855f7','#ec4899','#f59e0b','#10b981','#f43f5e'];
+      const color = colors[Math.min(comboCount - 1, colors.length - 1)] || colors[0];
+      rows.forEach(r => { const y = rect.top + r * (cw + pad) + cw/2; for (let c = 0; c < 8; c++) spawnBurst(rect.left + c * (cw + pad) + cw/2, y, color); });
+      cols.forEach(c => { const x = rect.left + c * (cw + pad) + cw/2; for (let r = 0; r < 8; r++) spawnBurst(x, rect.top + r * (cw + pad) + cw/2, color); });
+    }
+    function updateParticles() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      for (let i = particles.length - 1; i >= 0; i--) { const p = particles[i]; p.update(); if (p.alpha <= 0) particles.splice(i, 1); else p.draw(); }
+      requestAnimationFrame(updateParticles);
+    }
+    requestAnimationFrame(updateParticles);
+    function shakeScreen(el) { el.classList.remove('shake'); void el.offsetWidth; el.classList.add('shake'); setTimeout(() => el.classList.remove('shake'), 200); }
+    function hapticPulse(p) { if ('vibrate' in navigator) try { navigator.vibrate(p); } catch(e) {} }
+
+    // ========================================================================
+    // HIGH SCORE
+    // ========================================================================
+    let highScore = parseInt(localStorage.getItem('blockblast_best') || '0', 10);
+
+    // ========================================================================
+    // SOLO MODE
+    // ========================================================================
+    const soloGame = new GameState();
+    let soloDrag = { isDragging: false, slotIndex: null, piece: null };
+    let soloGrid = [];
+
+    const soloBoardEl = document.getElementById('solo-board');
+    const soloBoardContainer = document.getElementById('solo-board-container');
+    const soloSlots = [0,1,2].map(i => document.getElementById('solo-slot-'+i));
+    const soloScore = document.getElementById('solo-score');
+    const soloCombo = document.getElementById('solo-combo');
+    const soloComboBar = document.getElementById('solo-combo-bar');
+    const soloTip = document.getElementById('solo-tip');
+    const soloRescue = document.getElementById('solo-rescue-pill');
+    const dragGhost = document.getElementById('drag-ghost');
+
+    function soloInit() {
+      soloGame.board = Array(8).fill(null).map(() => Array(8).fill(null));
+      soloGame.score = 0; soloGame.combo = 0; soloGame.isGameOver = false;
+      soloGame.activePieces = [null, null, null];
+      soloScore.textContent = '0'; soloCombo.textContent = 'x1'; soloComboBar.style.width = '0%';
+      soloRescue.classList.add('hidden');
+      soloTip.textContent = "Drag shapes from the top tray onto the board!";
+      soloTip.className = "text-slate-400 text-[10px] font-medium";
+      buildBoardUI(soloBoardEl); drawBoardState(soloBoardEl, soloGame.board);
+      soloGenerateSet();
+    }
+
+    function soloGenerateSet() {
+      soloGame.generateNextSet();
+      for (let i = 0; i < 3; i++) {
+        renderPieceInSlot(soloSlots[i], soloGame.activePieces[i], 14);
+        if (soloGame.activePieces[i]) {
+          const el = soloSlots[i].children[0];
+          if (el) {
+            el.addEventListener('mousedown', (e) => soloStartDrag(e, i, soloGame.activePieces[i], false));
+            el.addEventListener('touchstart', (e) => soloStartDrag(e, i, soloGame.activePieces[i], true), { passive: false });
+          }
+        }
+      }
+      soloCheckGameOver();
+    }
+
+    function soloStartDrag(e, slotIdx, piece, isTouch) {
+      if (isTouch && e.cancelable) e.preventDefault();
+      if (soloGame.isGameOver) return;
+      sfx.init();
+      soloDrag = { isDragging: true, slotIndex: slotIdx, piece };
+      const cx = isTouch ? e.touches[0].clientX : e.clientX;
+      const cy = isTouch ? e.touches[0].clientY : e.clientY;
+      if (soloSlots[slotIdx].children[0]) soloSlots[slotIdx].children[0].style.opacity = '0.25';
+      createGhostMarkup(piece);
+      dragGhost.classList.remove('hidden');
+      updateGhostPos(cx, cy, 'solo');
+      if (isTouch) { window.addEventListener('touchmove', soloOnTouch, { passive: false }); window.addEventListener('touchend', soloDrop); }
+      else { window.addEventListener('mousemove', soloOnMove); window.addEventListener('mouseup', soloDrop); }
+    }
+
+    function soloOnMove(e) { if (!soloDrag.isDragging) return; updateGhostPos(e.clientX, e.clientY, 'solo'); }
+    function soloOnTouch(e) { if (!soloDrag.isDragging) return; if (e.cancelable) e.preventDefault(); const t = e.touches[0]; updateGhostPos(t.clientX, t.clientY, 'solo'); }
+
+    function createGhostMarkup(piece) {
+      dragGhost.innerHTML = '';
+      const grid = document.createElement('div');
+      const bw = soloBoardEl.children[0].offsetWidth || 34;
+      grid.className = 'grid gap-1 dragging-preview';
+      grid.style.gridTemplateColumns = `repeat(${piece.size[0]}, ${bw}px)`;
+      grid.style.gridTemplateRows = `repeat(${piece.size[1]}, ${bw}px)`;
+      const gm = Array(piece.size[1]).fill(0).map(() => Array(piece.size[0]).fill(false));
+      piece.cells.forEach(([cx, cy]) => { gm[cy][cx] = true; });
+      for (let y = 0; y < piece.size[1]; y++) for (let x = 0; x < piece.size[0]; x++) {
+        const b = document.createElement('div');
+        b.style.width = bw + 'px'; b.style.height = bw + 'px'; b.className = 'rounded-md';
+        if (gm[y][x]) { const cfg = COLORS[piece.color]; b.style.backgroundColor = cfg.fill; b.style.borderColor = cfg.border; b.style.borderWidth = '2px'; b.style.boxShadow = `0 4px 6px -1px ${cfg.glow}, inset 0 2px 4px rgba(255,255,255,0.3)`; }
+        else b.style.opacity = '0';
+        grid.appendChild(b);
+      }
+      dragGhost.appendChild(grid);
+    }
+
+    function updateGhostPos(cx, cy, mode) {
+      const boardEl = mode === 'solo' ? soloBoardEl : document.getElementById('vs-player-board');
+      const rect = boardEl.getBoundingClientRect();
+      const cellSize = rect.width / 8, threshold = 15;
+      const over = cx >= rect.left - threshold && cx <= rect.right + threshold && cy >= rect.top - threshold && cy <= rect.bottom + threshold;
+      let left, top;
+      if (over) {
+        const col = Math.floor((cx - rect.left) / cellSize), row = Math.floor((cy - rect.top) / cellSize);
+        left = rect.left + col * cellSize; top = rect.top + row * cellSize;
+        calcPreview(cx, cy, true, mode);
+      } else {
+        left = cx - dragGhost.offsetWidth / 2; top = cy - dragGhost.offsetHeight / 2 - 70;
+        calcPreview(cx, cy + 70, false, mode);
+      }
+      dragGhost.style.left = left + 'px'; dragGhost.style.top = top + 'px';
+    }
+
+    function calcPreview(tx, ty, snapped, mode) {
+      const boardEl = mode === 'solo' ? soloBoardEl : document.getElementById('vs-player-board');
+      const gs = mode === 'solo' ? soloGame : vsPlayerGame;
+      const drag = mode === 'solo' ? soloDrag : vsDrag;
+      clearPreview(mode);
+      const rect = boardEl.getBoundingClientRect(), cellSize = rect.width / 8;
+      const col = Math.floor((tx - rect.left) / cellSize), row = Math.floor((ty - rect.top) / cellSize);
+      const cells = []; let valid = true;
+      for (const [cx, cy] of drag.piece.cells) {
+        const br = row + cy, bc = col + cx;
+        if (br >= 0 && br < 8 && bc >= 0 && bc < 8) { cells.push({ r: br, c: bc }); if (gs.board[br][bc] !== null) valid = false; }
+        else valid = false;
+      }
+      if (mode === 'solo') soloGrid = cells.length === drag.piece.cells.length ? cells : [];
+      else vsGrid = cells.length === drag.piece.cells.length ? cells : [];
+      if (cells.length === drag.piece.cells.length) {
+        cells.forEach(({ r, c }) => {
+          const idx = r * 8 + c, cell = boardEl.children[idx];
+          if (valid) { cell.style.backgroundColor = COLORS[drag.piece.color].fill; cell.style.opacity = '0.7'; cell.classList.add('pulse-glow'); }
+          else cell.style.backgroundColor = 'rgba(239, 68, 68, 0.65)';
+        });
+      }
+    }
+
+    function clearPreview(mode) {
+      const boardEl = mode === 'solo' ? soloBoardEl : document.getElementById('vs-player-board');
+      const gs = mode === 'solo' ? soloGame : vsPlayerGame;
+      drawBoardState(boardEl, gs.board);
+      for (let i = 0; i < boardEl.children.length; i++) { boardEl.children[i].style.opacity = '1'; boardEl.children[i].classList.remove('pulse-glow'); }
+    }
+
+    function soloDrop(e) {
+      if (!soloDrag.isDragging) return;
+      window.removeEventListener('mousemove', soloOnMove); window.removeEventListener('mouseup', soloDrop);
+      window.removeEventListener('touchmove', soloOnTouch); window.removeEventListener('touchend', soloDrop);
+      dragGhost.classList.add('hidden');
+      const slotIdx = soloDrag.slotIndex;
+      if (soloSlots[slotIdx].children[0]) soloSlots[slotIdx].children[0].style.opacity = '1';
+      if (soloGrid.length === soloDrag.piece.cells.length) {
+        let can = true;
+        for (const { r, c } of soloGrid) { if (soloGame.board[r][c] !== null) { can = false; break; } }
+        if (can) {
+          const color = soloDrag.piece.color;
+          soloGrid.forEach(({ r, c }) => { soloGame.board[r][c] = color; });
+          soloGame.activePieces[slotIdx] = null;
+          soloSlots[slotIdx].innerHTML = '';
+          sfx.playPlace(); hapticPulse(15);
+          drawBoardState(soloBoardEl, soloGame.board);
+          soloGrid = [];
+          soloProcessLines();
+          const remaining = soloGame.activePieces.filter(p => p !== null).length;
+          if (remaining === 0) soloGenerateSet(); else soloCheckGameOver();
+        } else sfx.playPlace();
+      }
+      soloDrag.isDragging = false; soloDrag.slotIndex = null; soloDrag.piece = null; soloGrid = [];
+      clearPreview('solo');
+    }
+
+    function soloProcessLines() {
+      const cleared = soloGame.processLines();
+      if (cleared > 0) {
+        soloScore.textContent = soloGame.score;
+        soloCombo.textContent = `x${soloGame.combo}`;
+        soloComboBar.style.width = `${Math.min(soloGame.combo * 15, 100)}%`;
+        shakeScreen(soloBoardContainer);
+        triggerClearingVFX(soloBoardEl, [], [], soloGame.combo);
+        if (soloGame.combo >= 4) sfx.playComboMax(); else sfx.playClear(soloGame.combo);
+        hapticPulse(cleared * 20);
+        setTimeout(() => { drawBoardState(soloBoardEl, soloGame.board); saveHighScoreSolo(); updateSoloDifficulty(); }, 150);
+        if (soloGame.comboTimer) clearTimeout(soloGame.comboTimer);
+        soloGame.comboTimer = setTimeout(() => { soloComboBar.style.width = '0%'; }, 5000);
+      } else {
+        if (soloGame.combo > 0) { soloGame.combo = Math.max(0, soloGame.combo - 1); soloCombo.textContent = `x${Math.max(1, soloGame.combo)}`; soloComboBar.style.width = `${Math.min(soloGame.combo * 15, 100)}%`; }
+      }
+    }
+
+    function updateSoloDifficulty() {
+      const stats = soloGame.analyzeBoardDifficulty();
+      if (stats.isDangerous) { soloRescue.classList.remove('hidden'); soloTip.textContent = "🚀 Rescue System: Easier shapes enabled!"; soloTip.className = "text-amber-400 text-[10px] font-semibold animate-pulse"; }
+      else { soloRescue.classList.add('hidden'); soloTip.textContent = "Drag shapes from the top tray onto the board!"; soloTip.className = "text-slate-400 text-[10px] font-medium"; }
+    }
+
+    function soloCheckGameOver() {
+      if (soloGame.checkGameOver()) {
+        sfx.playGameOver(); hapticPulse([50, 100, 50, 150]);
+        document.getElementById('modal-score').textContent = soloGame.score;
+        document.getElementById('modal-high').textContent = highScore;
+        document.getElementById('modal-icon').innerHTML = '💀';
+        document.getElementById('modal-title').textContent = 'NO MOVES';
+        document.getElementById('modal-desc').textContent = 'The grid is too cluttered and none of your shapes fit.';
+        document.getElementById('modal-retry').onclick = () => { hideModal('game-over-modal'); soloInit(); };
+        document.getElementById('modal-menu').onclick = () => { hideModal('game-over-modal'); showScreen('mode-screen'); };
+        showModal('game-over-modal');
+      }
+    }
+
+    function saveHighScoreSolo() {
+      if (soloGame.score > highScore) { highScore = soloGame.score; document.getElementById('solo-high').textContent = highScore; localStorage.setItem('blockblast_best', highScore.toString()); }
+    }
+
+    // ========================================================================
+    // VS AI MODE
+    // ========================================================================
+    const vsPlayerGame = new GameState();
+    const vsAIGame = new GameState();
+    let vsTurn = 'player', vsGameActive = false, vsWaitingForAI = false;
+
+    const vsPlayerBoard = document.getElementById('vs-player-board');
+    const vsPlayerBoardContainer = document.getElementById('vs-player-board-container');
+    const vsAIBoard = document.getElementById('vs-ai-board');
+    const vsAIBoardContainer = document.getElementById('vs-ai-board-container');
+    const vsPlayerSlots = [0,1,2].map(i => document.getElementById('vs-player-slot-'+i));
+    const vsAISlots = [0,1,2].map(i => document.getElementById('vs-ai-slot-'+i));
+    const vsPlayerScore = document.getElementById('vs-player-score');
+    const vsAIScore = document.getElementById('vs-ai-score');
+    const vsTurnIndicator = document.getElementById('vs-turn-indicator');
+    const vsTip = document.getElementById('vs-tip');
+
+    let vsDrag = { isDragging: false, slotIndex: null, piece: null };
+    let vsGrid = [];
+
+    function vsInit() {
+      vsPlayerGame.board = Array(8).fill(null).map(() => Array(8).fill(null));
+      vsPlayerGame.score = 0; vsPlayerGame.combo = 0; vsPlayerGame.isGameOver = false;
+      vsPlayerGame.activePieces = [null, null, null];
+      vsAIGame.board = Array(8).fill(null).map(() => Array(8).fill(null));
+      vsAIGame.score = 0; vsAIGame.combo = 0; vsAIGame.isGameOver = false;
+      vsAIGame.activePieces = [null, null, null];
+      vsTurn = 'player'; vsGameActive = true; vsWaitingForAI = false;
+      vsPlayerScore.textContent = '0'; vsAIScore.textContent = '0';
+      vsTurnIndicator.textContent = 'Your Turn'; vsTurnIndicator.className = 'text-[11px] bg-emerald-700/60 px-2 py-0.5 rounded-full font-bold';
+      vsTip.textContent = 'Place a shape, then the AI takes its turn!'; vsTip.className = 'text-slate-400 text-[9px] font-medium';
+      buildBoardUI(vsPlayerBoard); buildBoardUI(vsAIBoard);
+      drawBoardState(vsPlayerBoard, vsPlayerGame.board); drawBoardState(vsAIBoard, vsAIGame.board);
+      vsGenerateSet('player'); vsGenerateSet('ai');
+    }
+
+    function vsGenerateSet(who) {
+      const game = who === 'player' ? vsPlayerGame : vsAIGame;
+      const slots = who === 'player' ? vsPlayerSlots : vsAISlots;
+      game.generateNextSet();
+      for (let i = 0; i < 3; i++) {
+        if (who === 'player') {
+          renderPieceInSlot(slots[i], game.activePieces[i], 12);
+          const el = slots[i].children[0];
+          if (el && game.activePieces[i]) {
+            el.addEventListener('mousedown', (e) => vsStartDrag(e, i, game.activePieces[i], false));
+            el.addEventListener('touchstart', (e) => vsStartDrag(e, i, game.activePieces[i], true), { passive: false });
+          }
+        } else renderAIPieceInSlot(slots[i], game.activePieces[i], 9);
+      }
+      if (who === 'player') vsCheckGameOver('player'); else vsCheckGameOver('ai');
+    }
+
+    function vsStartDrag(e, slotIdx, piece, isTouch) {
+      if (isTouch && e.cancelable) e.preventDefault();
+      if (!vsGameActive || vsTurn !== 'player' || vsWaitingForAI || vsPlayerGame.isGameOver) return;
+      sfx.init();
+      vsDrag = { isDragging: true, slotIndex: slotIdx, piece };
+      const cx = isTouch ? e.touches[0].clientX : e.clientX;
+      const cy = isTouch ? e.touches[0].clientY : e.clientY;
+      if (vsPlayerSlots[slotIdx].children[0]) vsPlayerSlots[slotIdx].children[0].style.opacity = '0.25';
+      createGhostMarkup(piece);
+      dragGhost.classList.remove('hidden');
+      updateGhostPos(cx, cy, 'vs');
+      if (isTouch) { window.addEventListener('touchmove', vsOnTouch, { passive: false }); window.addEventListener('touchend', vsDrop); }
+      else { window.addEventListener('mousemove', vsOnMove); window.addEventListener('mouseup', vsDrop); }
+    }
+
+    function vsOnMove(e) { if (!vsDrag.isDragging) return; updateGhostPos(e.clientX, e.clientY, 'vs'); }
+    function vsOnTouch(e) { if (!vsDrag.isDragging) return; if (e.cancelable) e.preventDefault(); const t = e.touches[0]; updateGhostPos(t.clientX, t.clientY, 'vs'); }
+
+    function vsDrop(e) {
+      if (!vsDrag.isDragging) return;
+      window.removeEventListener('mousemove', vsOnMove); window.removeEventListener('mouseup', vsDrop);
+      window.removeEventListener('touchmove', vsOnTouch); window.removeEventListener('touchend', vsDrop);
+      dragGhost.classList.add('hidden');
+      const slotIdx = vsDrag.slotIndex;
+      if (vsPlayerSlots[slotIdx].children[0]) vsPlayerSlots[slotIdx].children[0].style.opacity = '1';
+      if (vsGrid.length === vsDrag.piece.cells.length) {
+        let can = true;
+        for (const { r, c } of vsGrid) { if (vsPlayerGame.board[r][c] !== null) { can = false; break; } }
+        if (can) {
+          const color = vsDrag.piece.color;
+          vsGrid.forEach(({ r, c }) => { vsPlayerGame.board[r][c] = color; });
+          vsPlayerGame.activePieces[slotIdx] = null;
+          vsPlayerSlots[slotIdx].innerHTML = '';
+          sfx.playPlace(); hapticPulse(15);
+          drawBoardState(vsPlayerBoard, vsPlayerGame.board);
+          vsGrid = [];
+          vsProcessLines('player');
+          const remaining = vsPlayerGame.activePieces.filter(p => p !== null).length;
+          if (remaining === 0) vsGenerateSet('player'); else vsCheckGameOver('player');
+          if (vsGameActive && !vsPlayerGame.isGameOver) vsStartAITurn();
+        } else sfx.playPlace();
+      }
+      vsDrag.isDragging = false; vsDrag.slotIndex = null; vsDrag.piece = null; vsGrid = [];
+      clearPreview('vs');
+    }
+
+    function vsProcessLines(who) {
+      const game = who === 'player' ? vsPlayerGame : vsAIGame;
+      const boardEl = who === 'player' ? vsPlayerBoard : vsAIBoard;
+      const boardCont = who === 'player' ? vsPlayerBoardContainer : vsAIBoardContainer;
+      const scoreEl = who === 'player' ? vsPlayerScore : vsAIScore;
+      const cleared = game.processLines();
+      if (cleared > 0) {
+        scoreEl.textContent = game.score;
+        shakeScreen(boardCont);
+        triggerClearingVFX(boardEl, [], [], game.combo);
+        if (game.combo >= 4) sfx.playComboMax(); else sfx.playClear(game.combo);
+        hapticPulse(cleared * 20);
+        setTimeout(() => drawBoardState(boardEl, game.board), 150);
+      }
+    }
+
+    function vsCheckGameOver(who) {
+      const game = who === 'player' ? vsPlayerGame : vsAIGame;
+      if (game.checkGameOver()) {
+        game.isGameOver = true;
+        vsEndGame();
+      }
+    }
+
+    function vsStartAITurn() {
+      if (!vsGameActive || vsAIGame.isGameOver) { vsEndGame(); return; }
+      vsTurn = 'ai'; vsWaitingForAI = true;
+      vsTurnIndicator.textContent = 'AI Thinking...';
+      vsTurnIndicator.className = 'text-[11px] bg-amber-700/60 px-2 py-0.5 rounded-full font-bold ai-thinking';
+      vsTip.textContent = '🤖 AI is calculating the best move...';
+      vsPlayerSlots.forEach(slot => { if (slot.children[0]) slot.children[0].style.pointerEvents = 'none'; });
+      setTimeout(() => vsExecuteAIMove(), 600 + Math.random() * 400);
+    }
+
+    function vsExecuteAIMove() {
+      if (!vsGameActive || vsAIGame.isGameOver) { vsEndGame(); return; }
+      const bestMove = AI.findBestMove(vsAIGame);
+      if (bestMove) {
+        const piece = bestMove.piece, row = bestMove.row, col = bestMove.col;
+        for (const [cx, cy] of piece.cells) vsAIGame.board[row+cy][col+cx] = piece.color;
+        vsAIGame.activePieces[bestMove.pieceIndex] = null;
+        vsAISlots[bestMove.pieceIndex].innerHTML = '';
+        drawBoardState(vsAIBoard, vsAIGame.board);
+        sfx.playPlace();
+        vsProcessLines('ai');
+        const remaining = vsAIGame.activePieces.filter(p => p !== null).length;
+        if (remaining === 0) vsGenerateSet('ai'); else vsCheckGameOver('ai');
+      } else vsAIGame.isGameOver = true;
+      vsPlayerSlots.forEach(slot => { if (slot.children[0]) slot.children[0].style.pointerEvents = 'auto'; });
+      vsTurn = 'player'; vsWaitingForAI = false;
+      if (!vsGameActive) return;
+      if (vsPlayerGame.isGameOver || vsAIGame.isGameOver) { vsEndGame(); return; }
+      vsTurnIndicator.textContent = 'Your Turn';
+      vsTurnIndicator.className = 'text-[11px] bg-emerald-700/60 px-2 py-0.5 rounded-full font-bold';
+      vsTip.textContent = 'Place a shape, then the AI takes its turn!';
+    }
+
+    function vsEndGame() {
+      vsGameActive = false; vsWaitingForAI = false;
+      vsTurnIndicator.textContent = 'Game Over';
+      vsTurnIndicator.className = 'text-[11px] bg-red-700/60 px-2 py-0.5 rounded-full font-bold';
+      const pScore = vsPlayerGame.score, aScore = vsAIGame.score;
+      let winner = '';
+      if (vsPlayerGame.isGameOver && vsAIGame.isGameOver) winner = pScore > aScore ? 'player' : aScore > pScore ? 'ai' : 'tie';
+      else if (vsPlayerGame.isGameOver) winner = 'ai';
+      else if (vsAIGame.isGameOver) winner = 'player';
+      else winner = pScore > aScore ? 'player' : aScore > pScore ? 'ai' : 'tie';
+      if (winner === 'player') {
+        document.getElementById('vs-result-title').textContent = '🎉 YOU WIN!';
+        document.getElementById('vs-result-icon').innerHTML = '🏆';
+        document.getElementById('vs-result-desc').textContent = 'You outlasted the AI! Great strategy!';
+        document.getElementById('vs-result-icon').className = 'w-16 h-16 bg-emerald-500/10 border-2 border-emerald-500/30 text-emerald-500 rounded-full flex items-center justify-center mx-auto mb-1 text-2xl';
+        sfx.playWin();
+      } else if (winner === 'ai') {
+        document.getElementById('vs-result-title').textContent = '🤖 AI WINS';
+        document.getElementById('vs-result-icon').innerHTML = '💻';
+        document.getElementById('vs-result-desc').textContent = 'The AI was too strong this time. Try again!';
+        document.getElementById('vs-result-icon').className = 'w-16 h-16 bg-rose-500/10 border-2 border-rose-500/30 text-rose-500 rounded-full flex items-center justify-center mx-auto mb-1 text-2xl';
+        sfx.playLose();
+      } else {
+        document.getElementById('vs-result-title').textContent = '⚖️ IT\'S A TIE!';
+        document.getElementById('vs-result-icon').innerHTML = '🤝';
+        document.getElementById('vs-result-desc').textContent = 'Evenly matched! One more round?';
+        document.getElementById('vs-result-icon').className = 'w-16 h-16 bg-amber-500/10 border-2 border-amber-500/30 text-amber-500 rounded-full flex items-center justify-center mx-auto mb-1 text-2xl';
+        sfx.playGameOver();
+      }
+      document.getElementById('vs-result-player').textContent = pScore;
+      document.getElementById('vs-result-ai').textContent = aScore;
+      document.getElementById('vs-result-retry').onclick = () => { hideModal('vs-result-modal'); vsInit(); };
+      document.getElementById('vs-result-menu').onclick = () => { hideModal('vs-result-modal'); showScreen('mode-screen'); };
+      showModal('vs-result-modal');
+    }
+
+    // ========================================================================
+    // UI HELPERS
+    // ========================================================================
+    function showScreen(id) {
+      document.getElementById('mode-screen').classList.add('hidden');
+      document.getElementById('solo-ui').classList.add('hidden');
+      document.getElementById('vs-ui').classList.add('hidden');
+      document.getElementById(id).classList.remove('hidden');
+    }
+    function showModal(id) { const el = document.getElementById(id); el.classList.remove('hidden'); setTimeout(() => { el.classList.remove('opacity-0'); el.classList.add('opacity-100'); }, 50); }
+    function hideModal(id) { const el = document.getElementById(id); el.classList.remove('opacity-100'); el.classList.add('opacity-0'); setTimeout(() => el.classList.add('hidden'), 300); }
+    function setupAudioToggle(btnId) {
+      document.getElementById(btnId).addEventListener('click', () => {
+        sfx.init(); sfx.muted = !sfx.muted;
+        const btn = document.getElementById(btnId);
+        if (sfx.muted) { btn.textContent = '🔇 Sound Off'; btn.className = "px-2 py-1 bg-slate-800/40 hover:bg-slate-700/40 border border-slate-700 text-slate-400 rounded-full transition-all text-[11px] flex items-center justify-center gap-1"; }
+        else { btn.textContent = '🔊 Sound On'; btn.className = "px-2 py-1 bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700 rounded-full transition-all text-[11px] flex items-center justify-center gap-1"; }
+      });
+    }
+
+    // ========================================================================
+    // EVENT BINDINGS
+    // ========================================================================
+    document.getElementById('btn-solo').addEventListener('click', () => { showScreen('solo-ui'); soloInit(); });
+    document.getElementById('btn-vs-ai').addEventListener('click', () => { showScreen('vs-ui'); vsInit(); });
+    document.getElementById('solo-back').addEventListener('click', () => showScreen('mode-screen'));
+    document.getElementById('vs-back').addEventListener('click', () => { vsGameActive = false; showScreen('mode-screen'); });
+    setupAudioToggle('solo-audio-toggle');
+    setupAudioToggle('vs-audio-toggle');
+    document.getElementById('solo-high').textContent = highScore;
+    showScreen('mode-screen');
+  </script>
+</body>
+</html>
