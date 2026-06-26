@@ -1,1618 +1,1191 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>PoPo - Solo & VS AI</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&display=swap" rel="stylesheet">
-  <style>
-    body {
-      font-family: 'Outfit', sans-serif;
-      touch-action: none;
-      -webkit-tap-highlight-color: transparent;
-      user-select: none;
-      -webkit-user-select: none;
-      background: radial-gradient(circle at center, #1e1b4b 0%, #0f172a 100%);
-      overflow: hidden;
-    }
-    html, body {
-      margin: 0;
-      padding: 0;
-      width: 100%;
-      height: 100%;
-    }
-    .board-grid {
-      display: grid;
-      grid-template-columns: repeat(8, minmax(0, 1fr));
-      grid-template-rows: repeat(8, minmax(0, 1fr));
-    }
-    @keyframes popIn {
-      0% { transform: scale(0.8); opacity: 0; }
-      100% { transform: scale(1); opacity: 1; }
-    }
-    .animate-pop {
-      animation: popIn 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
-    }
-    @keyframes pulseGlow {
-      0%, 100% { box-shadow: 0 0 4px rgba(168, 85, 247, 0.4); }
-      50% { box-shadow: 0 0 16px rgba(168, 85, 247, 0.8); }
-    }
-    .pulse-glow {
-      animation: pulseGlow 1.5s infinite;
-    }
-    .shake {
-      animation: shakeAnim 0.2s cubic-bezier(.36,.07,.19,.97) both;
-      transform: translate3d(0, 0, 0);
-    }
-    @keyframes shakeAnim {
-      10%, 90% { transform: translate3d(-2px, 0, 0); }
-      20%, 80% { transform: translate3d(4px, 0, 0); }
-      30%, 50%, 70% { transform: translate3d(-6px, 0, 0); }
-      40%, 60% { transform: translate3d(6px, 0, 0); }
-    }
-    #particles-canvas {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      pointer-events: none;
-      z-index: 30;
-    }
-    .dragging-preview {
-      opacity: 0.95;
-      transform: scale(1.02);
-      box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.7), 0 8px 10px -6px rgb(0 0 0 / 0.7);
-    }
-    .mode-btn {
-      transition: all 0.2s ease;
-    }
-    .mode-btn:hover {
-      transform: scale(1.03);
-    }
-    .mode-btn:active {
-      transform: scale(0.97);
-    }
-    .vs-board-container {
-      display: grid;
-      grid-template-columns: 1.2fr 0.8fr;
-      gap: 6px;
-      max-width: 520px;
-      width: 100%;
-    }
-    .vs-board-wrapper {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 4px;
-    }
-    .vs-board-wrapper .board-grid {
-      width: 100%;
-      aspect-ratio: 1;
-    }
-    /* Scale down AI board visually (right side) */
-    #vs-ui .vs-board-wrapper:last-child {
-      transform: scale(0.82);
-      transform-origin: top center;
-      margin-bottom: -12px;
-    }
-    .vs-tray {
-      min-height: 56px;
-    }
-    .ai-thinking {
-      animation: pulseThink 1s infinite;
-    }
-    @keyframes pulseThink {
-      0%, 100% { opacity: 0.6; }
-      50% { opacity: 1; }
-    }
-    /* Scrollable board container for VS mode on small screens */
-    .vs-scroll {
-      max-height: 100vh;
-      overflow-y: auto;
-    }
-    .vs-scroll::-webkit-scrollbar {
-      width: 4px;
-    }
-    .vs-scroll::-webkit-scrollbar-thumb {
-      background: #334155;
-      border-radius: 2px;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>MatchCraft - Match-3 RTS Auto-Battler</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #0b0f19;
+            color: #f3f4f6;
+            user-select: none;
+            -webkit-user-select: none;
+            overflow: hidden;
+            touch-action: none;
+        }
+        @keyframes shake {
+            0%, 100% { transform: translate(0, 0); }
+            10%, 30%, 50%, 70%, 90% { transform: translate(-4px, 2px); }
+            20%, 40%, 60%, 80% { transform: translate(4px, -2px); }
+        }
+        .shake-element { animation: shake 0.4s ease-in-out; }
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-track { background: rgba(15, 23, 42, 0.5); }
+        ::-webkit-scrollbar-thumb { background: rgba(100, 116, 139, 0.5); border-radius: 4px; }
+        .tile-active {
+            transform: scale(0.9);
+            box-shadow: inset 0 0 12px rgba(255, 255, 255, 0.8), 0 0 15px rgba(255, 255, 255, 0.6);
+            border-color: rgba(255, 255, 255, 0.8) !important;
+        }
+        @keyframes tileMatch {
+            0% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.15); filter: brightness(1.5); opacity: 0.8; }
+            100% { transform: scale(0.2); opacity: 0; }
+        }
+        .tile-matched { animation: tileMatch 0.3s ease-out forwards; }
+        .mana-btn { transition: all 0.2s; }
+        .mana-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+        .mana-btn:not(:disabled):hover { transform: scale(1.05); }
+        .enemy-tile {
+            font-size: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 3px;
+            border: 1px solid rgba(100, 116, 139, 0.3);
+            background: rgba(30, 41, 59, 0.6);
+        }
+    </style>
 </head>
-<body class="flex flex-col items-center justify-start min-h-screen text-white p-2 md:p-4 overflow-hidden gap-2">
+<body class="flex flex-col items-center justify-center min-h-screen p-2 md:p-4 select-none">
 
-  <canvas id="particles-canvas"></canvas>
+    <div id="game-container" class="relative w-full max-w-md bg-slate-900 border-2 border-slate-700 rounded-3xl overflow-hidden flex flex-col shadow-2xl" style="height: 94vh; max-height: 880px;">
+        
+        <!-- Header -->
+        <header class="bg-slate-950 p-2 flex justify-between items-center border-b border-slate-800 text-xs z-10">
+            <div class="flex items-center gap-2">
+                <span class="text-amber-500 font-extrabold text-sm tracking-wide">MATCHCRAFT</span>
+                <span class="bg-slate-800 text-slate-400 px-2 py-0.5 rounded text-[10px]">v2.0</span>
+            </div>
+            <div class="flex items-center gap-2">
+                <div class="flex items-center gap-1 bg-slate-800 px-2 py-1 rounded-full text-amber-400 font-bold">
+                    <i class="fa-solid fa-trophy text-[10px]"></i>
+                    <span id="score-display">0</span>
+                </div>
+                <button id="speed-btn" class="bg-amber-600 hover:bg-amber-500 text-white font-bold px-2 py-1 rounded flex items-center gap-1 transition-all text-[10px]">
+                    <span id="speed-text">1x</span>
+                    <i class="fa-solid fa-forward text-[10px]"></i>
+                </button>
+                <button id="help-btn" class="text-slate-400 hover:text-white"><i class="fa-solid fa-circle-question"></i></button>
+            </div>
+        </header>
 
-  <!-- ======================== MODE SELECTION SCREEN ======================== -->
-  <div id="mode-screen" class="flex flex-col items-center justify-center w-full max-w-sm min-h-screen gap-6 z-20">
-    <div class="text-center space-y-2">
-      <span class="text-6xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-cyan-400 via-indigo-400 to-purple-400">POPO</span>
-      <p class="text-slate-400 text-sm">Block Puzzle Challenge</p>
+        <div id="status-banner" class="hidden absolute top-11 left-0 right-0 bg-amber-500/90 text-slate-950 text-center font-bold py-1 px-4 z-20 text-xs shadow-md">Status</div>
+
+        <!-- Mana Bar + Skills at TOP -->
+        <div class="bg-slate-950 px-2 py-1 border-b border-slate-800 flex flex-col gap-1 z-10">
+            <div class="flex items-center justify-between gap-2 bg-slate-900/40 p-1 rounded-xl border border-slate-800">
+                <div class="flex-1">
+                    <div class="flex justify-between items-center mb-0.5 text-[8px]">
+                        <span class="flex items-center gap-1 font-bold text-purple-400"><i class="fa-solid fa-bolt animate-pulse"></i> MANA</span>
+                        <span id="mana-text" class="font-mono text-purple-300 font-bold">0 / 100</span>
+                    </div>
+                    <div class="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden relative">
+                        <div id="mana-bar-fill" class="bg-gradient-to-r from-purple-600 via-indigo-500 to-cyan-400 h-full w-0 transition-all duration-300"></div>
+                        <div class="absolute top-0 left-[33%] w-0.5 h-full bg-white/30"></div>
+                        <div class="absolute top-0 left-[66%] w-0.5 h-full bg-white/30"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="grid grid-cols-3 gap-1">
+                <button id="skill-shield" disabled class="mana-btn flex items-center justify-center gap-1 p-1 bg-cyan-900/40 border border-cyan-700/30 rounded-lg text-[8px] text-cyan-300 font-bold"><i class="fa-solid fa-shield-halved text-[10px]"></i> Shield 33</button>
+                <button id="skill-nuke" disabled class="mana-btn flex items-center justify-center gap-1 p-1 bg-orange-900/40 border border-orange-700/30 rounded-lg text-[8px] text-orange-300 font-bold"><i class="fa-solid fa-bomb text-[10px]"></i> Nuke 66</button>
+                <button id="skill-thor" disabled class="mana-btn flex items-center justify-center gap-1 p-1 bg-purple-900/40 border border-purple-700/30 rounded-lg text-[8px] text-purple-300 font-bold"><i class="fa-solid fa-bolt text-[10px]"></i> Thor 100</button>
+            </div>
+        </div>
+
+        <!-- Battlefield Canvas -->
+        <div class="relative w-full h-[38%] min-h-[200px] bg-slate-950 border-b-2 border-slate-800 flex flex-col">
+            <canvas id="battle-canvas" class="w-full h-full block bg-slate-950"></canvas>
+        </div>
+
+        <!-- Match-3 Board with Enemy Mini Board -->
+        <div id="board-container" class="relative flex-1 bg-slate-950 p-1.5 flex flex-col items-center justify-center select-none gap-1">
+            <!-- Enemy Mini Board (AI opponent) -->
+            <div class="w-full flex items-center justify-between px-1">
+                <span class="text-[8px] text-red-400 font-bold">ENEMY BOARD</span>
+                <div class="flex items-center gap-2">
+                    <div id="enemy-board-status" class="text-[8px] text-slate-500">thinking...</div>
+                    <button id="minimize-enemy-btn" class="text-[8px] text-slate-400 hover:text-white transition-colors">
+                        <i class="fa-solid fa-chevron-up"></i>
+                    </button>
+                </div>
+            </div>
+            <div id="enemy-match3-grid" class="grid grid-cols-8 gap-0.5 w-full max-w-[370px] bg-slate-900/50 p-1 rounded-lg border border-slate-800/50 transition-all duration-300">
+                <!-- Enemy tiles injected here -->
+            </div>
+            <!-- Player Board -->
+            <div class="w-full flex items-center justify-between px-1 mt-1">
+                <span class="text-[8px] text-blue-400 font-bold">YOUR BOARD</span>
+                <button id="autoplay-btn" class="text-[8px] text-slate-400 hover:text-white transition-colors">
+                    <i class="fa-solid fa-play"></i> Auto
+                </button>
+            </div>
+            <div id="player-match3-grid" class="grid grid-cols-8 gap-1 w-full aspect-square max-w-[370px] bg-slate-900/70 p-1.5 rounded-2xl border border-slate-800 relative shadow-inner">
+                <!-- Player tiles injected here -->
+            </div>
+        </div>
+
+        <!-- Bottom Panel -->
+        <div class="bg-slate-950 px-2 py-1 border-t border-slate-800 flex flex-col gap-1 z-10">
+            <div class="h-7 text-[8px] bg-slate-900/60 border border-slate-850 rounded-lg p-1 overflow-y-auto flex flex-col" id="combat-logger">
+                <div class="text-slate-500 italic text-center">Match tiles! Purple = Mana.</div>
+            </div>
+            <div class="grid grid-cols-5 gap-1 text-center text-[7px] text-slate-400">
+                <div class="bg-red-950/20 py-0.5 rounded border border-red-950/40">⚔️ Ground</div>
+                <div class="bg-blue-950/20 py-0.5 rounded border border-blue-950/40">🔫 Anti-Air</div>
+                <div class="bg-green-950/20 py-0.5 rounded border border-green-950/40 text-green-300 font-bold">🚁 Flies</div>
+                <div class="bg-yellow-950/20 py-0.5 rounded border border-yellow-950/40">💣 Ground</div>
+                <div class="bg-purple-950/20 py-0.5 rounded border border-purple-950/40">🔮 Mana</div>
+            </div>
+        </div>
+
+        <!-- Help Modal -->
+        <div id="help-modal" class="hidden absolute inset-0 bg-slate-950/95 p-6 z-40 flex flex-col justify-between overflow-y-auto">
+            <div class="space-y-4">
+                <div class="flex justify-between items-center border-b border-slate-800 pb-2">
+                    <h3 class="font-extrabold text-amber-500 text-sm">MATCHCRAFT v2.0</h3>
+                    <button onclick="toggleHelp(false)"><i class="fa-solid fa-xmark text-slate-400 text-lg"></i></button>
+                </div>
+                <div class="text-[11px] text-slate-300 space-y-3">
+                    <p><span class="font-bold text-amber-300">🗺️ Zigzag Road:</span> Player base bottom-left, Enemy base top-right. Ground units follow the winding road. Helicopters fly over walls!</p>
+                    <p><span class="font-bold text-blue-300">🔫 Rifleman = Anti-Air Only</span></p>
+                    <p><span class="font-bold text-green-300">🚁 Helicopters</span> kill Riflemen first, then flyers, then base.</p>
+                    <p><span class="font-bold text-purple-300">🔮 Mana Skills:</span> Shield (33) protects all units 4s. Nuke (66) destroys ground enemies. Thor (100) summons the T5 boss!</p>
+                    <p><span class="font-bold text-amber-300">🌈 Rainbow:</span> Match-5 creates a rainbow tile. Swapping it destroys ALL tiles of that type!</p>
+                </div>
+            </div>
+            <button onclick="toggleHelp(false)" class="w-full bg-slate-800 hover:bg-slate-700 text-white font-bold py-2 rounded-xl text-xs mt-4">Got it!</button>
+        </div>
+
+        <!-- Game Over -->
+        <div id="gameover-modal" class="hidden absolute inset-0 bg-slate-950/95 flex flex-col items-center justify-center p-6 z-50">
+            <div class="text-center space-y-4 max-w-[280px]">
+                <div id="gameover-icon" class="text-5xl animate-bounce">🏆</div>
+                <h2 id="gameover-title" class="text-2xl font-black text-amber-400 uppercase tracking-widest">VICTORY</h2>
+                <p id="gameover-subtitle" class="text-xs text-slate-400">You won!</p>
+                <div class="bg-slate-900 p-3 rounded-xl border border-slate-800 space-y-2 text-left">
+                    <div class="flex justify-between text-xs"><span>Score:</span><span id="stat-score" class="font-bold font-mono text-amber-400">0</span></div>
+                    <div class="flex justify-between text-xs"><span>Spawned:</span><span id="stat-spawned" class="font-bold font-mono">0</span></div>
+                    <div class="flex justify-between text-xs"><span>Combos:</span><span id="stat-combos" class="font-bold font-mono text-purple-400">0</span></div>
+                </div>
+                <button onclick="resetGame()" class="w-full bg-gradient-to-r from-amber-600 to-amber-500 text-slate-950 font-black py-3 px-6 rounded-xl text-xs">PLAY AGAIN</button>
+            </div>
+        </div>
     </div>
-    <div class="flex flex-col gap-4 w-full px-6">
-      <button id="btn-solo" class="mode-btn w-full bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white font-bold py-4 px-6 rounded-xl shadow-lg shadow-indigo-500/20 text-lg tracking-wide">
-        🎮 SOLO MODE
-      </button>
-      <button id="btn-vs-ai" class="mode-btn w-full bg-gradient-to-r from-amber-500 to-rose-600 hover:from-amber-600 hover:to-rose-700 text-white font-bold py-4 px-6 rounded-xl shadow-lg shadow-amber-500/20 text-lg tracking-wide">
-        🤖 VS AI MODE
-      </button>
-    </div>
-    <div class="text-slate-500 text-xs text-center px-6 mt-2">
-      <p>In VS AI, you and the AI take turns placing shapes.<br>The last player with valid moves wins!</p>
-    </div>
-  </div>
 
-  <!-- ======================== SOLO MODE UI ======================== -->
-  <div id="solo-ui" class="hidden w-full max-w-sm flex flex-col items-center gap-2 mt-1 z-10">
-    <header class="w-full flex flex-col items-center gap-1.5">
-      <div class="flex justify-between items-center w-full px-1">
-        <div class="flex items-center gap-2">
-          <button id="solo-back" class="text-slate-400 hover:text-white text-lg transition-colors">←</button>
-          <span class="text-2xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-cyan-400 via-indigo-400 to-purple-400">SOLO</span>
-          <span id="solo-rescue-pill" class="hidden text-[10px] bg-red-500/80 border border-red-400 text-white px-2 py-0.5 rounded-full font-bold animate-pulse">RESCUE ON</span>
-        </div>
-        <button id="solo-audio-toggle" class="px-2 py-1 bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700 rounded-full transition-all text-[11px] flex items-center justify-center gap-1">
-          🔊 Sound On
-        </button>
-      </div>
-      <div class="grid grid-cols-3 gap-2 w-full">
-        <div class="bg-slate-900/60 border border-slate-800 backdrop-blur-md rounded-xl p-1.5 text-center flex flex-col justify-center">
-          <span class="text-slate-400 text-[9px] font-semibold uppercase tracking-wider">Score</span>
-          <span id="solo-score" class="text-lg font-extrabold text-cyan-300">0</span>
-        </div>
-        <div class="bg-slate-900/60 border border-slate-800 backdrop-blur-md rounded-xl p-1.5 text-center flex flex-col justify-center relative overflow-hidden">
-          <span class="text-slate-400 text-[9px] font-semibold uppercase tracking-wider">Combo</span>
-          <span id="solo-combo" class="text-lg font-extrabold text-amber-400">x1</span>
-          <div id="solo-combo-bar" class="absolute bottom-0 left-0 h-0.5 bg-amber-500 transition-all duration-300" style="width: 0%"></div>
-        </div>
-        <div class="bg-slate-900/60 border border-slate-800 backdrop-blur-md rounded-xl p-1.5 text-center flex flex-col justify-center">
-          <span class="text-slate-400 text-[9px] font-semibold uppercase tracking-wider">Best</span>
-          <span id="solo-high" class="text-lg font-extrabold text-purple-400">0</span>
-        </div>
-      </div>
-    </header>
-    <section class="w-full">
-      <div id="solo-tray" class="bg-slate-900/40 border border-slate-800/50 backdrop-blur-lg rounded-2xl p-2 w-full flex justify-around items-center min-h-[76px] gap-2 shadow-inner">
-        <div id="solo-slot-0" class="flex items-center justify-center w-16 h-16 relative"></div>
-        <div id="solo-slot-1" class="flex items-center justify-center w-16 h-16 relative"></div>
-        <div id="solo-slot-2" class="flex items-center justify-center w-16 h-16 relative"></div>
-      </div>
-    </section>
-    <main class="w-full flex flex-col items-center justify-center">
-      <div id="solo-board-container" class="relative w-full max-w-[280px] aspect-square bg-slate-950/80 border-4 border-slate-800/80 rounded-2xl p-1.5 shadow-2xl transition-all duration-150">
-        <div id="solo-board" class="board-grid w-full h-full gap-1">
-          <!-- 64 cells -->
-        </div>
-      </div>
-    </main>
-    <div class="text-center mt-0">
-      <p id="solo-tip" class="text-slate-400 text-[10px] font-medium">Drag shapes from the top tray onto the board!</p>
-    </div>
-  </div>
+    <script>
+    // ============================================================
+    // 1. CONFIGURATION
+    // ============================================================
+    const GRID_SIZE = 8;
+    const ENEMY_GRID_SIZE = 8;
+    const SYMBOL_MAP = { 1: '⚔️', 2: '🔫', 3: '🚁', 4: '💣', 5: '🔮', 6: '🌈' };
+    const MAX_BASE_HP = 100;
+    const AI_MATCH_INTERVAL = 2500;
 
-  <!-- ======================== VS AI MODE UI ======================== -->
-  <div id="vs-ui" class="hidden w-full max-w-md flex flex-col items-center gap-1 z-10 vs-scroll" style="max-height: 100dvh;">
-    <!-- VS Header -->
-    <header class="w-full flex justify-between items-center px-1">
-      <button id="vs-back" class="text-slate-400 hover:text-white text-lg transition-colors">←</button>
-      <div class="flex items-center gap-2">
-        <span class="text-xl font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-amber-400 to-rose-500">VS AI</span>
-        <span id="vs-turn-indicator" class="text-[11px] bg-slate-700/60 px-2 py-0.5 rounded-full font-bold">Your Turn</span>
-      </div>
-      <button id="vs-audio-toggle" class="px-2 py-1 bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700 rounded-full transition-all text-[11px] flex items-center justify-center gap-1">
-        🔊 Sound On
-      </button>
-    </header>
-
-    <!-- Two boards side by side -->
-    <div class="vs-board-container w-full">
-      <!-- Player Board (LEFT, BIGGER) -->
-      <div class="vs-board-wrapper">
-        <div class="flex items-center gap-1">
-          <span class="text-[10px] text-slate-400 font-semibold">🧑 You</span>
-          <span id="vs-player-score" class="text-xs font-bold text-cyan-300">0</span>
-        </div>
-        <div id="vs-player-board-container" class="relative w-full aspect-square bg-slate-950/80 border-2 border-slate-700/80 rounded-xl p-1 shadow-lg">
-          <div id="vs-player-board" class="board-grid w-full h-full gap-0.5"></div>
-        </div>
-        <!-- Player Tray -->
-        <div id="vs-player-tray" class="bg-slate-900/40 border border-slate-800/50 rounded-xl p-1 w-full flex justify-around items-center min-h-[44px] gap-1 shadow-inner">
-          <div id="vs-player-slot-0" class="flex items-center justify-center w-10 h-10 relative"></div>
-          <div id="vs-player-slot-1" class="flex items-center justify-center w-10 h-10 relative"></div>
-          <div id="vs-player-slot-2" class="flex items-center justify-center w-10 h-10 relative"></div>
-        </div>
-      </div>
-
-      <!-- AI Board (RIGHT, SMALLER) -->
-      <div class="vs-board-wrapper">
-        <div class="flex items-center gap-1">
-          <span class="text-[10px] text-slate-400 font-semibold">&#129302; AI</span>
-          <span id="vs-ai-score" class="text-xs font-bold text-rose-400">0</span>
-        </div>
-        <div id="vs-ai-board-container" class="relative w-full aspect-square bg-slate-950/80 border-2 border-slate-700/80 rounded-xl p-1 shadow-lg">
-          <div id="vs-ai-board" class="board-grid w-full h-full gap-0.5"></div>
-        </div>
-        <!-- AI Tray (smaller) -->
-        <div id="vs-ai-tray" class="bg-slate-900/40 border border-slate-800/50 rounded-xl p-1 w-full flex justify-around items-center min-h-[44px] gap-1 shadow-inner">
-          <div id="vs-ai-slot-0" class="flex items-center justify-center w-10 h-10 relative"></div>
-          <div id="vs-ai-slot-1" class="flex items-center justify-center w-10 h-10 relative"></div>
-          <div id="vs-ai-slot-2" class="flex items-center justify-center w-10 h-10 relative"></div>
-        </div>
-      </div>
-    </div>
-
-    <!-- VS Tip -->
-    <div class="text-center mt-0">
-      <p id="vs-tip" class="text-slate-400 text-[9px] font-medium">Place a shape, then the AI takes its turn!</p>
-    </div>
-  </div>
-
-  <!-- Drag Ghost -->
-  <div id="drag-ghost" class="fixed pointer-events-none z-50 hidden transition-transform duration-75 origin-center"></div>
-
-  <!-- Game Over Modal (shared) -->
-  <div id="game-over-modal" class="fixed inset-0 bg-slate-950/95 backdrop-blur-md flex flex-col items-center justify-center p-6 z-40 hidden opacity-0 transition-opacity duration-300">
-    <div class="max-w-xs w-full text-center space-y-4 animate-pop">
-      <div id="modal-icon" class="w-16 h-16 bg-red-500/10 border-2 border-red-500/30 text-red-500 rounded-full flex items-center justify-center mx-auto mb-1 text-2xl">
-        💀
-      </div>
-      <h2 id="modal-title" class="text-3xl font-extrabold tracking-tight bg-gradient-to-b from-white to-slate-400 bg-clip-text text-transparent">NO MOVES</h2>
-      <p id="modal-desc" class="text-slate-400 text-xs">The grid is too cluttered and none of your shapes fit.</p>
-      
-      <div class="bg-slate-900/60 border border-slate-800 p-3 rounded-xl space-y-2">
-        <div class="flex justify-between items-center text-xs">
-          <span class="text-slate-400">Final Score</span>
-          <span id="modal-score" class="text-xl font-bold text-cyan-300">0</span>
-        </div>
-        <div class="flex justify-between items-center text-xs border-t border-slate-800 pt-2">
-          <span class="text-slate-400">High Score</span>
-          <span id="modal-high" class="text-lg font-bold text-purple-400">0</span>
-        </div>
-      </div>
-
-      <div class="flex flex-col gap-2">
-        <button id="modal-retry" class="w-full bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white font-bold py-3 px-6 rounded-xl shadow-lg shadow-indigo-500/20 active:scale-95 transition-all text-sm tracking-wide">
-          TRY AGAIN
-        </button>
-        <button id="modal-menu" class="w-full bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold py-2 px-6 rounded-xl border border-slate-700 active:scale-95 transition-all text-sm">
-          MAIN MENU
-        </button>
-      </div>
-    </div>
-  </div>
-
-  <!-- VS Result Modal -->
-  <div id="vs-result-modal" class="fixed inset-0 bg-slate-950/95 backdrop-blur-md flex flex-col items-center justify-center p-6 z-40 hidden opacity-0 transition-opacity duration-300">
-    <div class="max-w-xs w-full text-center space-y-4 animate-pop">
-      <div id="vs-result-icon" class="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-1 text-2xl"></div>
-      <h2 id="vs-result-title" class="text-3xl font-extrabold tracking-tight bg-gradient-to-b from-white to-slate-400 bg-clip-text text-transparent">GAME OVER</h2>
-      <p id="vs-result-desc" class="text-slate-400 text-xs"></p>
-      
-      <div class="bg-slate-900/60 border border-slate-800 p-3 rounded-xl space-y-2">
-        <div class="flex justify-between items-center text-xs">
-          <span class="text-slate-400">🧑 Your Score</span>
-          <span id="vs-result-player" class="text-lg font-bold text-cyan-300">0</span>
-        </div>
-        <div class="flex justify-between items-center text-xs border-t border-slate-800 pt-2">
-          <span class="text-slate-400">🤖 AI Score</span>
-          <span id="vs-result-ai" class="text-lg font-bold text-rose-400">0</span>
-        </div>
-      </div>
-
-      <div class="flex flex-col gap-2">
-        <button id="vs-result-retry" class="w-full bg-gradient-to-r from-amber-500 to-rose-600 hover:from-amber-600 hover:to-rose-700 text-white font-bold py-3 px-6 rounded-xl shadow-lg shadow-amber-500/20 active:scale-95 transition-all text-sm tracking-wide">
-          PLAY AGAIN
-        </button>
-        <button id="vs-result-menu" class="w-full bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold py-2 px-6 rounded-xl border border-slate-700 active:scale-95 transition-all text-sm">
-          MAIN MENU
-        </button>
-      </div>
-    </div>
-  </div>
-
-  <script>
-    // ========================================================================
-    // AUDIO
-    // ========================================================================
-    class SoundController {
-      constructor() {
-        this.ctx = null;
-        this.muted = false;
-      }
-      init() {
-        if (!this.ctx) {
-          this.ctx = new (window.AudioContext || window.webkitAudioContext)();
-        }
-      }
-      playPlace() {
-        if (this.muted) return;
-        this.init();
-        const osc = this.ctx.createOscillator();
-        const gain = this.ctx.createGain();
-        osc.connect(gain); gain.connect(this.ctx.destination);
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(300, this.ctx.currentTime);
-        osc.frequency.exponentialRampToValueAtTime(150, this.ctx.currentTime + 0.15);
-        gain.gain.setValueAtTime(0.15, this.ctx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.15);
-        osc.start(); osc.stop(this.ctx.currentTime + 0.15);
-      }
-      playClear(comboCount = 1) {
-        if (this.muted) return;
-        this.init();
-        const now = this.ctx.currentTime;
-        for (let i = 0; i < comboCount; i++) {
-          const osc = this.ctx.createOscillator();
-          const gain = this.ctx.createGain();
-          osc.connect(gain); gain.connect(this.ctx.destination);
-          osc.type = 'triangle';
-          const baseFreq = 261.63;
-          const intervals = [1, 1.25, 1.5, 1.875, 2];
-          const pitchFactor = intervals[Math.min(i, intervals.length - 1)];
-          const targetFreq = baseFreq * pitchFactor;
-          osc.frequency.setValueAtTime(targetFreq, now + (i * 0.08));
-          osc.frequency.exponentialRampToValueAtTime(targetFreq * 2, now + (i * 0.08) + 0.25);
-          gain.gain.setValueAtTime(0.12, now + (i * 0.08));
-          gain.gain.exponentialRampToValueAtTime(0.01, now + (i * 0.08) + 0.3);
-          osc.start(now + (i * 0.08));
-          osc.stop(now + (i * 0.08) + 0.3);
-        }
-      }
-      playComboMax() {
-        if (this.muted) return;
-        this.init();
-        const osc = this.ctx.createOscillator();
-        const gain = this.ctx.createGain();
-        osc.connect(gain); gain.connect(this.ctx.destination);
-        osc.type = 'sawtooth';
-        osc.frequency.setValueAtTime(180, this.ctx.currentTime);
-        osc.frequency.exponentialRampToValueAtTime(880, this.ctx.currentTime + 0.45);
-        gain.gain.setValueAtTime(0.1, this.ctx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.45);
-        osc.start(); osc.stop(this.ctx.currentTime + 0.45);
-      }
-      playGameOver() {
-        if (this.muted) return;
-        this.init();
-        const osc = this.ctx.createOscillator();
-        const gain = this.ctx.createGain();
-        osc.connect(gain); gain.connect(this.ctx.destination);
-        osc.type = 'triangle';
-        osc.frequency.setValueAtTime(220, this.ctx.currentTime);
-        osc.frequency.linearRampToValueAtTime(80, this.ctx.currentTime + 0.8);
-        gain.gain.setValueAtTime(0.2, this.ctx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.8);
-        osc.start(); osc.stop(this.ctx.currentTime + 0.8);
-      }
-      playWin() {
-        if (this.muted) return;
-        this.init();
-        const now = this.ctx.currentTime;
-        [523.25, 659.25, 783.99, 1046.5].forEach((freq, i) => {
-          const osc = this.ctx.createOscillator();
-          const gain = this.ctx.createGain();
-          osc.connect(gain); gain.connect(this.ctx.destination);
-          osc.type = 'square';
-          osc.frequency.setValueAtTime(freq, now + i * 0.12);
-          gain.gain.setValueAtTime(0.08, now + i * 0.12);
-          gain.gain.exponentialRampToValueAtTime(0.01, now + i * 0.12 + 0.25);
-          osc.start(now + i * 0.12); osc.stop(now + i * 0.12 + 0.25);
-        });
-      }
-      playLose() {
-        if (this.muted) return;
-        this.init();
-        const osc = this.ctx.createOscillator();
-        const gain = this.ctx.createGain();
-        osc.connect(gain); gain.connect(this.ctx.destination);
-        osc.type = 'sawtooth';
-        osc.frequency.setValueAtTime(400, this.ctx.currentTime);
-        osc.frequency.linearRampToValueAtTime(100, this.ctx.currentTime + 0.6);
-        gain.gain.setValueAtTime(0.1, this.ctx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.6);
-        osc.start(); osc.stop(this.ctx.currentTime + 0.6);
-      }
-    }
-    const sfx = new SoundController();
-
-    // ========================================================================
-    // COLORS & SHAPES
-    // ========================================================================
-    const COLORS = {
-      cyan: { fill: '#06b6d4', border: '#0891b2', glow: 'rgba(6, 182, 212, 0.5)' },
-      blue: { fill: '#3b82f6', border: '#2563eb', glow: 'rgba(59, 130, 246, 0.5)' },
-      purple: { fill: '#a855f7', border: '#9333ea', glow: 'rgba(168, 85, 247, 0.5)' },
-      pink: { fill: '#ec4899', border: '#db2777', glow: 'rgba(236, 72, 153, 0.5)' },
-      emerald: { fill: '#10b981', border: '#059669', glow: 'rgba(16, 185, 129, 0.5)' },
-      amber: { fill: '#f59e0b', border: '#d97706', glow: 'rgba(245, 158, 11, 0.5)' },
-      rose: { fill: '#f43f5e', border: '#e11d48', glow: 'rgba(244, 63, 94, 0.5)' }
-    };
-
-    const ALL_SHAPES = [
-      { id: 'I_h', size: [4, 1], cells: [[0,0], [1,0], [2,0], [3,0]], color: 'cyan' },
-      { id: 'I_v', size: [1, 4], cells: [[0,0], [0,1], [0,2], [0,3]], color: 'cyan' },
-      { id: 'O', size: [2, 2], cells: [[0,0], [1,0], [0,1], [1,1]], color: 'blue' },
-      { id: 'T_0', size: [3, 2], cells: [[0,0], [1,0], [2,0], [1,1]], color: 'purple' },
-      { id: 'T_1', size: [2, 3], cells: [[1,0], [0,1], [1,1], [1,2]], color: 'purple' },
-      { id: 'T_2', size: [3, 2], cells: [[1,0], [0,1], [1,1], [2,1]], color: 'purple' },
-      { id: 'T_3', size: [2, 3], cells: [[0,0], [0,1], [1,1], [0,2]], color: 'purple' },
-      { id: 'L_0', size: [2, 3], cells: [[0,0], [0,1], [0,2], [1,2]], color: 'pink' },
-      { id: 'L_1', size: [3, 2], cells: [[0,1], [1,1], [2,1], [0,0]], color: 'pink' },
-      { id: 'L_2', size: [2, 3], cells: [[0,0], [1,0], [1,1], [1,2]], color: 'pink' },
-      { id: 'L_3', size: [3, 2], cells: [[0,0], [1,0], [2,0], [2,1]], color: 'pink' },
-      { id: 'J_0', size: [2, 3], cells: [[1,0], [1,1], [0,2], [1,2]], color: 'pink' },
-      { id: 'J_1', size: [3, 2], cells: [[0,0], [0,1], [1,1], [2,1]], color: 'pink' },
-      { id: 'J_2', size: [2, 3], cells: [[0,0], [1,0], [0,1], [0,2]], color: 'pink' },
-      { id: 'J_3', size: [3, 2], cells: [[0,0], [1,0], [2,0], [2,1]], color: 'pink' },
-      { id: 'S', size: [3, 2], cells: [[1,0], [2,0], [0,1], [1,1]], color: 'emerald' },
-      { id: 'Z', size: [3, 2], cells: [[0,0], [1,0], [1,1], [2,1]], color: 'emerald' },
-      { id: '3_line_h', size: [3, 1], cells: [[0,0], [1,0], [2,0]], color: 'amber' },
-      { id: '3_line_v', size: [1, 3], cells: [[0,0], [0,1], [0,2]], color: 'amber' },
-      { id: '3_corner_0', size: [2, 2], cells: [[0,0], [1,0], [0,1]], color: 'rose' },
-      { id: '3_corner_1', size: [2, 2], cells: [[0,0], [1,0], [1,1]], color: 'rose' },
-      { id: '3_corner_2', size: [2, 2], cells: [[0,1], [1,1], [0,0]], color: 'rose' },
-      { id: '3_corner_3', size: [2, 2], cells: [[0,1], [1,1], [1,0]], color: 'rose' },
-      { id: '2_line_h', size: [2, 1], cells: [[0,0], [1,0]], color: 'emerald' },
-      { id: '2_line_v', size: [1, 2], cells: [[0,0], [0,1]], color: 'emerald' },
-      { id: '1_single', size: [1, 1], cells: [[0,0]], color: 'cyan' }
+    // ============================================================
+    // 2. ZIGZAG ROAD (Bottom-Left to Top-Right)
+    // ============================================================
+    const ROAD_WAYPOINTS = [
+        {x:0.06, y:0.92}, {x:0.10, y:0.86}, {x:0.16, y:0.80},
+        {x:0.28, y:0.82}, {x:0.40, y:0.80}, {x:0.52, y:0.82}, {x:0.64, y:0.80}, {x:0.76, y:0.82}, {x:0.88, y:0.80}, {x:0.95, y:0.76},
+        {x:0.90, y:0.68}, {x:0.82, y:0.64}, {x:0.74, y:0.66},
+        {x:0.62, y:0.64}, {x:0.50, y:0.66}, {x:0.38, y:0.64}, {x:0.26, y:0.66}, {x:0.14, y:0.64}, {x:0.05, y:0.60},
+        {x:0.08, y:0.52}, {x:0.14, y:0.48}, {x:0.22, y:0.50},
+        {x:0.34, y:0.48}, {x:0.46, y:0.50}, {x:0.58, y:0.48}, {x:0.70, y:0.50}, {x:0.82, y:0.48}, {x:0.95, y:0.44},
+        {x:0.90, y:0.36}, {x:0.82, y:0.32}, {x:0.74, y:0.34},
+        {x:0.62, y:0.32}, {x:0.50, y:0.34}, {x:0.38, y:0.32}, {x:0.26, y:0.34}, {x:0.14, y:0.32}, {x:0.05, y:0.28},
+        {x:0.08, y:0.20}, {x:0.16, y:0.16}, {x:0.24, y:0.18},
+        {x:0.36, y:0.16}, {x:0.48, y:0.18}, {x:0.60, y:0.16}, {x:0.72, y:0.18}, {x:0.84, y:0.16},
+        {x:0.94, y:0.08}
     ];
 
-    // ========================================================================
-    // GAME STATE CLASS - reusable for Solo and VS mode instances
-    // ========================================================================
-    class GameState {
-      constructor() {
-        this.board = Array(8).fill(null).map(() => Array(8).fill(null));
-        this.score = 0;
-        this.combo = 0;
-        this.comboTimer = null;
-        this.activePieces = [null, null, null];
-        this.isGameOver = false;
-      }
+    let roadPath = [];
 
-      cloneBoard() {
-        return this.board.map(r => [...r]);
-      }
-
-      analyzeBoardDifficulty() {
-        let emptyCells = 0;
-        let isolatedHoles = 0;
-        const grid = [];
-        for (let r = 0; r < 8; r++) {
-          grid[r] = [];
-          for (let c = 0; c < 8; c++) {
-            grid[r][c] = (this.board[r][c] !== null);
-            if (!grid[r][c]) emptyCells++;
-          }
-        }
-        for (let r = 0; r < 8; r++) {
-          for (let c = 0; c < 8; c++) {
-            if (!grid[r][c]) {
-              if ((r === 0 || grid[r - 1][c]) && (r === 7 || grid[r + 1][c]) &&
-                  (c === 0 || grid[r][c - 1]) && (c === 7 || grid[r][c + 1])) {
-                isolatedHoles++;
-              }
-            }
-          }
-        }
-        const isDangerous = (emptyCells < 22) || (isolatedHoles >= 3);
-        return { isDangerous, emptyCells, isolatedHoles };
-      }
-
-      pickRandomShape() {
-        const stats = this.analyzeBoardDifficulty();
-        let p4 = 50, p3 = 25, p2 = 15, p1 = 10;
-        if (stats.isDangerous) { p4 = 20; p3 = 20; p2 = 35; p1 = 25; }
-        const total = p4 + p3 + p2 + p1;
-        const roll = Math.random() * total;
-        let chosenSize;
-        if (roll < p4) chosenSize = 4;
-        else if (roll < p4 + p3) chosenSize = 3;
-        else if (roll < p4 + p3 + p2) chosenSize = 2;
-        else chosenSize = 1;
-        const variations = ALL_SHAPES.filter(s => s.cells.length === chosenSize);
-        return JSON.parse(JSON.stringify(variations[Math.floor(Math.random() * variations.length)]));
-      }
-
-      canPlaceAt(shape, boardRow, boardCol) {
-        for (const [cx, cy] of shape.cells) {
-          const r = boardRow + cy;
-          const c = boardCol + cx;
-          if (r < 0 || r >= 8 || c < 0 || c >= 8) return false;
-          if (this.board[r][c] !== null) return false;
-        }
-        return true;
-      }
-
-      canPlaceShapeSomewhere(shape) {
-        if (!shape) return false;
-        for (let r = 0; r <= 8 - shape.size[1]; r++) {
-          for (let c = 0; c <= 8 - shape.size[0]; c++) {
-            if (this.canPlaceAt(shape, r, c)) return true;
-          }
-        }
-        return false;
-      }
-
-      hasAnyValidMove() {
-        for (const piece of this.activePieces) {
-          if (piece && this.canPlaceShapeSomewhere(piece)) return true;
-        }
-        return false;
-      }
-
-      placePiece(shape, boardRow, boardCol) {
-        for (const [cx, cy] of shape.cells) {
-          this.board[boardRow + cy][boardCol + cx] = shape.color;
-        }
-      }
-
-      processLines() {
-        const rows = [];
-        const cols = [];
-        for (let r = 0; r < 8; r++) {
-          if (this.board[r].every(c => c !== null)) rows.push(r);
-        }
-        for (let c = 0; c < 8; c++) {
-          let full = true;
-          for (let r = 0; r < 8; r++) { if (this.board[r][c] === null) { full = false; break; } }
-          if (full) cols.push(c);
-        }
-        const total = rows.length + cols.length;
-        if (total > 0) {
-          this.combo++;
-          let base = 100;
-          if (total === 2) base = 300;
-          else if (total === 3) base = 600;
-          else if (total >= 4) base = 1000;
-          this.score += base * this.combo;
-          rows.forEach(r => { for (let c = 0; c < 8; c++) this.board[r][c] = null; });
-          cols.forEach(c => { for (let r = 0; r < 8; r++) this.board[r][c] = null; });
-        } else {
-          if (this.combo > 1) this.combo--;
-          else this.combo = 0;
-        }
-        return total;
-      }
-
-      // Simulate placing a piece and return lines cleared (without mutating)
-      simulatePlacement(shape, boardRow, boardCol) {
-        const tempBoard = this.cloneBoard();
-        for (const [cx, cy] of shape.cells) {
-          tempBoard[boardRow + cy][boardCol + cx] = true;
-        }
-        let lines = 0;
-        for (let r = 0; r < 8; r++) {
-          if (tempBoard[r].every(c => c !== null)) lines++;
-        }
-        for (let c = 0; c < 8; c++) {
-          let full = true;
-          for (let r = 0; r < 8; r++) { if (tempBoard[r][c] === null) { full = false; break; } }
-          if (full) lines++;
-        }
-        return lines;
-      }
-
-      generateNextSet() {
-        const stats = this.analyzeBoardDifficulty();
-        const forceRescue = stats.emptyCells < 15;
-        let generated = [];
-        let success = false;
-        let attempts = 0;
-        while (!success && attempts < 50) {
-          generated = [
-            this.pickRandomShape(), this.pickRandomShape(), this.pickRandomShape()
-          ];
-          for (let i = 0; i < 3; i++) {
-            if (this.canPlaceShapeSomewhere(generated[i])) { success = true; break; }
-          }
-          attempts++;
-        }
-        if (!success) {
-          generated[Math.floor(Math.random() * 3)] = JSON.parse(JSON.stringify(ALL_SHAPES.find(s => s.cells.length === 1)));
-        }
-        this.activePieces = generated;
-      }
-
-      checkGameOver() {
-        if (!this.hasAnyValidMove()) {
-          this.isGameOver = true;
-          return true;
-        }
-        return false;
-      }
+    function buildRoadPath() {
+        if (!cw || !ch) return;
+        roadPath = ROAD_WAYPOINTS.map(wp => ({ x: wp.x * cw, y: wp.y * ch }));
     }
 
-    // ========================================================================
-    // AI ENGINE
-    // ========================================================================
-    const AI = {
-      // Find the best move for a given game state
-      findBestMove(gameState) {
-        const pieces = [];
-        for (let i = 0; i < gameState.activePieces.length; i++) {
-          if (gameState.activePieces[i] !== null) {
-            pieces.push({ piece: gameState.activePieces[i], originalIndex: i });
-          }
-        }
-        let bestMove = null;
-        let bestScore = -Infinity;
-
-        for (let pi = 0; pi < pieces.length; pi++) {
-          const { piece, originalIndex } = pieces[pi];
-          const moves = this.getAllValidMoves(gameState, piece);
-          
-          for (const move of moves) {
-            const score = this.evaluateMove(gameState, piece, move.row, move.col, originalIndex);
-            if (score > bestScore) {
-              bestScore = score;
-              bestMove = { pieceIndex: originalIndex, row: move.row, col: move.col, piece: piece };
-            }
-          }
-        }
-
-        return bestMove;
-      },
-
-      getAllValidMoves(gameState, shape) {
-        const moves = [];
-        for (let r = 0; r <= 8 - shape.size[1]; r++) {
-          for (let c = 0; c <= 8 - shape.size[0]; c++) {
-            if (gameState.canPlaceAt(shape, r, c)) {
-              moves.push({ row: r, col: c });
-            }
-          }
-        }
-        return moves;
-      },
-
-      evaluateMove(gameState, shape, row, col, pieceIndex) {
-        // 1. SIMULATE lines cleared by this placement
-        const linesCleared = gameState.simulatePlacement(shape, row, col);
-
-        // 2. SIMULATE board after clearing lines
-        const simBoard = gameState.cloneBoard();
-        // Place the piece
-        for (const [cx, cy] of shape.cells) {
-          simBoard[row + cy][col + cx] = true;
-        }
-        // Clear lines
-        const clearedRows = [];
-        const clearedCols = [];
-        for (let r = 0; r < 8; r++) {
-          if (simBoard[r].every(c => c !== null)) clearedRows.push(r);
-        }
-        for (let c = 0; c < 8; c++) {
-          let full = true;
-          for (let r = 0; r < 8; r++) { if (simBoard[r][c] === null) { full = false; break; } }
-          if (full) clearedCols.push(c);
-        }
-        // Apply clears
-        clearedRows.forEach(r => { for (let c = 0; c < 8; c++) simBoard[r][c] = null; });
-        clearedCols.forEach(c => { for (let r = 0; r < 8; r++) simBoard[r][c] = null; });
-
-        // 3. Check remaining pieces for follow-up clears (look-ahead)
-        let followUpScore = 0;
-        const remainingPieces = gameState.activePieces.filter((p, i) => i !== pieceIndex && p !== null);
-        for (const rp of remainingPieces) {
-          let bestFollowUp = 0;
-          for (let r = 0; r <= 8 - rp.size[1]; r++) {
-            for (let c = 0; c <= 8 - rp.size[0]; c++) {
-              let valid = true;
-              for (const [cx, cy] of rp.cells) {
-                const tr = r + cy, tc = c + cx;
-                if (tr < 0 || tr >= 8 || tc < 0 || tc >= 8 || simBoard[tr][tc] !== null) {
-                  valid = false; break;
+    function getNextWaypoint(ux, uy, forward, currentWaypointIndex) {
+        if (roadPath.length < 2) return null;
+        
+        // Use the tracked waypoint index to ensure sequential progression
+        let targetIndex;
+        if (forward) {
+            // Moving forward: progress through waypoints 0 -> 1 -> 2 -> ... -> end
+            if (currentWaypointIndex !== undefined && currentWaypointIndex < roadPath.length - 1) {
+                targetIndex = currentWaypointIndex + 1;
+            } else if (currentWaypointIndex === undefined) {
+                // Fallback: find nearest and move to next
+                let nearest = 0, nearestDist = Infinity;
+                for (let i = 0; i < roadPath.length; i++) {
+                    const d = Math.sqrt((ux-roadPath[i].x)**2 + (uy-roadPath[i].y)**2);
+                    if (d < nearestDist) { nearestDist = d; nearest = i; }
                 }
-              }
-              if (valid) {
-                // Simulate follow-up clears
-                const tempBoard2 = simBoard.map(rr => [...rr]);
-                for (const [cx, cy] of rp.cells) tempBoard2[r + cy][c + cx] = true;
-                let followLines = 0;
-                for (let rr = 0; rr < 8; rr++) if (tempBoard2[rr].every(cc => cc !== null)) followLines++;
-                for (let cc = 0; cc < 8; cc++) {
-                  let full = true;
-                  for (let rr = 0; rr < 8; rr++) { if (tempBoard2[rr][cc] === null) { full = false; break; } }
-                  if (full) followLines++;
+                if (nearest < roadPath.length - 1) {
+                    targetIndex = nearest + 1;
+                } else {
+                    return null; // Reached the end
                 }
-                if (followLines > bestFollowUp) bestFollowUp = followLines;
-              }
+            } else {
+                return null; // Reached the end
             }
-          }
-          followUpScore += bestFollowUp;
-        }
-
-        // 4. SCORING
-        let score = 0;
-
-        // PRIMARY: Lines cleared (weighted heavily)
-        score += linesCleared * 1000;
-
-        // Look-ahead: lines that could be cleared with remaining pieces
-        score += followUpScore * 300;
-
-        // If this placement clears 2+ lines at once, huge bonus
-        if (linesCleared >= 2) score += 2000;
-        if (linesCleared >= 3) score += 5000;
-        if (linesCleared >= 4) score += 10000;
-
-        // SECONDARY: Placement quality heuristics
-        // Prefer placing near center (more strategic)
-        const centerR = 3.5, centerC = 3.5;
-        const distToCenter = Math.abs(row + shape.size[1]/2 - centerR) + Math.abs(col + shape.size[0]/2 - centerC);
-        score -= distToCenter * 5;
-
-        // Prefer filling gaps (count empty neighbors)
-        let emptyNeighbors = 0;
-        for (const [cx, cy] of shape.cells) {
-          const br = row + cy, bc = col + cx;
-          // Check 4 neighbors
-          [[-1,0],[1,0],[0,-1],[0,1]].forEach(([dr, dc]) => {
-            const nr = br + dr, nc = bc + dc;
-            if (nr >= 0 && nr < 8 && nc >= 0 && nc < 8 && gameState.board[nr][nc] === null) {
-              emptyNeighbors++;
+        } else {
+            // Moving backward: progress through waypoints end -> end-1 -> end-2 -> ... -> 0
+            if (currentWaypointIndex !== undefined && currentWaypointIndex > 0) {
+                targetIndex = currentWaypointIndex - 1;
+            } else if (currentWaypointIndex === undefined) {
+                // Fallback: find nearest and move to previous
+                let nearest = 0, nearestDist = Infinity;
+                for (let i = 0; i < roadPath.length; i++) {
+                    const d = Math.sqrt((ux-roadPath[i].x)**2 + (uy-roadPath[i].y)**2);
+                    if (d < nearestDist) { nearestDist = d; nearest = i; }
+                }
+                if (nearest > 0) {
+                    targetIndex = nearest - 1;
+                } else {
+                    return null; // Reached the start
+                }
+            } else {
+                return null; // Reached the start
             }
-          });
         }
-        score += emptyNeighbors * 2;
+        
+        return roadPath[targetIndex];
+    }
 
-        // Prefer smaller pieces when board is crowded (survival)
-        const boardFill = gameState.board.flat().filter(c => c !== null).length;
-        if (boardFill > 50) {
-          score += (4 - shape.cells.length) * 50;
-        }
-
-        return score;
-      }
+    // ============================================================
+    // 3. UNIT STATS
+    // ============================================================
+    const UNIT_STATS = {
+        1: { name: "Infantry", hp: 140, damage: 16, range: 11, speed: 1.3, cooldown: 0.7, flying: false, antiAir: false, color: '#ef4444', symbol: '⚔️', radius: 6 },
+        2: { name: "Rifleman", hp: 95, damage: 32, range: 65, speed: 1.0, cooldown: 1.1, flying: false, antiAir: true, color: '#3b82f6', symbol: '🔫', radius: 6 },
+        3: { name: "Helicopter", hp: 105, damage: 22, range: 45, speed: 1.8, cooldown: 0.9, flying: true, antiAir: false, color: '#22c55e', symbol: '🚁', radius: 7 },
+        4: { name: "Siege Tank", hp: 190, damage: 55, range: 75, speed: 0.55, cooldown: 2.8, flying: false, antiAir: false, color: '#eab308', symbol: '💣', radius: 9 },
+        5: { name: "Thor Mech", hp: 980, damage: 85, range: 150, speed: 0.55, cooldown: 1.6, flying: false, antiAir: false, color: '#a855f7', symbol: '⚡', radius: 13 }
     };
 
-    // ========================================================================
-    // RENDER HELPERS
-    // ========================================================================
-    function buildBoardUI(boardEl) {
-      boardEl.innerHTML = '';
-      for (let r = 0; r < 8; r++) {
-        for (let c = 0; c < 8; c++) {
-          const cell = document.createElement('div');
-          cell.dataset.row = r;
-          cell.dataset.col = c;
-          cell.className = 'w-full h-full bg-slate-900/60 border border-slate-800/80 rounded-md transition-all duration-200 relative overflow-hidden';
-          const inner = document.createElement('div');
-          inner.className = 'absolute inset-[2px] bg-slate-950/20 rounded-sm';
-          cell.appendChild(inner);
-          boardEl.appendChild(cell);
-        }
-      }
-    }
-
-    function drawBoardState(boardEl, boardData) {
-      const cells = boardEl.children;
-      for (let r = 0; r < 8; r++) {
-        for (let c = 0; c < 8; c++) {
-          const idx = r * 8 + c;
-          const cell = cells[idx];
-          const val = boardData[r][c];
-          cell.style.backgroundColor = '';
-          cell.style.borderColor = '';
-          cell.style.boxShadow = '';
-          if (val) {
-            const config = COLORS[val];
-            cell.style.backgroundColor = config.fill;
-            cell.style.borderColor = config.border;
-            cell.style.boxShadow = 'inset 0 1.5px 3px rgba(255,255,255,0.2), 0 1.5px 3px rgba(0,0,0,0.3)';
-          }
-        }
-      }
-    }
-
-    function renderPieceInSlot(slotEl, piece, cellSize = 14, onClick = null) {
-      slotEl.innerHTML = '';
-      if (!piece) return;
-      const container = document.createElement('div');
-      container.className = 'grid gap-0.5 animate-pop relative';
-      container.style.gridTemplateColumns = `repeat(${piece.size[0]}, ${cellSize}px)`;
-      container.style.gridTemplateRows = `repeat(${piece.size[1]}, ${cellSize}px)`;
-      const gridMap = Array(piece.size[1]).fill(0).map(() => Array(piece.size[0]).fill(false));
-      piece.cells.forEach(([cx, cy]) => { gridMap[cy][cx] = true; });
-      for (let y = 0; y < piece.size[1]; y++) {
-        for (let x = 0; x < piece.size[0]; x++) {
-          const block = document.createElement('div');
-          block.className = `w-[${cellSize}px] h-[${cellSize}px] rounded-sm`;
-          if (gridMap[y][x]) {
-            const config = COLORS[piece.color];
-            block.style.backgroundColor = config.fill;
-            block.style.borderColor = config.border;
-            block.style.borderWidth = '1px';
-            block.style.boxShadow = 'inset 0 1px 1px rgba(255,255,255,0.2)';
-          } else {
-            block.style.opacity = '0';
-          }
-          container.appendChild(block);
-        }
-      }
-      if (onClick) {
-        container.style.cursor = 'pointer';
-        container.addEventListener('click', (e) => onClick(e, piece));
-      }
-      slotEl.appendChild(container);
-    }
-
-    function renderAIPieceInSlot(slotEl, piece, cellSize = 10) {
-      slotEl.innerHTML = '';
-      if (!piece) return;
-      const container = document.createElement('div');
-      container.className = 'grid gap-0.5 relative';
-      container.style.gridTemplateColumns = `repeat(${piece.size[0]}, ${cellSize}px)`;
-      container.style.gridTemplateRows = `repeat(${piece.size[1]}, ${cellSize}px)`;
-      const gridMap = Array(piece.size[1]).fill(0).map(() => Array(piece.size[0]).fill(false));
-      piece.cells.forEach(([cx, cy]) => { gridMap[cy][cx] = true; });
-      for (let y = 0; y < piece.size[1]; y++) {
-        for (let x = 0; x < piece.size[0]; x++) {
-          const block = document.createElement('div');
-          block.className = `w-[${cellSize}px] h-[${cellSize}px] rounded-sm`;
-          if (gridMap[y][x]) {
-            const config = COLORS[piece.color];
-            block.style.backgroundColor = config.fill;
-            block.style.borderColor = config.border;
-            block.style.borderWidth = '1px';
-            block.style.boxShadow = 'inset 0 1px 1px rgba(255,255,255,0.2)';
-          } else {
-            block.style.opacity = '0';
-          }
-          container.appendChild(block);
-        }
-      }
-      slotEl.appendChild(container);
-    }
-
-    // ========================================================================
-    // PARTICLE SYSTEM
-    // ========================================================================
-    const canvas = document.getElementById('particles-canvas');
-    const ctx = canvas.getContext('2d');
+    // ============================================================
+    // 4. GAME STATE
+    // ============================================================
+    let playerBoard = [];
+    let selectedTile = null;
+    let isProcessingMatch = false;
+    let enemyBoard = [];
+    let units = [];
+    let projectiles = [];
+    let airshipDropQueue = [];
     let particles = [];
-    function resizeCanvas() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
-    window.addEventListener('resize', resizeCanvas);
-    resizeCanvas();
-    class Particle {
-      constructor(x, y, color) { this.x = x; this.y = y; this.size = Math.random() * 4 + 3; this.speedX = (Math.random() - 0.5) * 12; this.speedY = (Math.random() - 0.5) * 12; this.gravity = 0.15; this.color = color; this.alpha = 1; this.decay = Math.random() * 0.02 + 0.015; }
-      update() { this.x += this.speedX; this.y += this.speedY; this.speedY += this.gravity; this.alpha -= this.decay; }
-      draw() { ctx.save(); ctx.globalAlpha = this.alpha; ctx.fillStyle = this.color; ctx.beginPath(); ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2); ctx.fill(); if (this.size > 5) { ctx.shadowBlur = 10; ctx.shadowColor = this.color; } ctx.restore(); }
-    }
-    function spawnBurst(x, y, color) { for (let i = 0; i < 8; i++) particles.push(new Particle(x, y, color)); }
-    function triggerClearingVFX(boardEl, rows, cols, comboCount) {
-      const rect = boardEl.getBoundingClientRect();
-      const padding = 4;
-      const cellW = boardEl.children[0].offsetWidth || 30;
-      const colors = ['#06b6d4', '#a855f7', '#ec4899', '#f59e0b', '#10b981', '#f43f5e'];
-      const color = colors[Math.min(comboCount - 1, colors.length - 1)] || colors[0];
-      rows.forEach(r => {
-        const y = rect.top + r * (cellW + padding) + (cellW / 2);
-        for (let c = 0; c < 8; c++) {
-          const x = rect.left + c * (cellW + padding) + (cellW / 2);
-          spawnBurst(x, y, color);
-        }
-      });
-      cols.forEach(c => {
-        const x = rect.left + c * (cellW + padding) + (cellW / 2);
-        for (let r = 0; r < 8; r++) {
-          const y = rect.top + r * (cellW + padding) + (cellW / 2);
-          spawnBurst(x, y, color);
-        }
-      });
-    }
-    function updateParticles() {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      for (let i = particles.length - 1; i >= 0; i--) { const p = particles[i]; p.update(); if (p.alpha <= 0) particles.splice(i, 1); else p.draw(); }
-      requestAnimationFrame(updateParticles);
-    }
-    requestAnimationFrame(updateParticles);
+    let spawnAlerts = [];
+    let canvas, ctx;
+    let cw = 0, ch = 0;
+    let lastTime = 0;
+    let gameScore = 0;
+    let totalUnitsSpawned = 0;
+    let maxComboReached = 0;
+    let manaProgress = 0;
+    let gameSpeed = 1;
+    let gameActive = true;
+    let playerBaseHP = MAX_BASE_HP;
+    let enemyBaseHP = MAX_BASE_HP;
+    let thorActive = false;
+    let shieldActive = false;
+    let shieldTimer = 0;
+    let aiMatchTimer = 0;
+    let enemyManaProgress = 0;
+    let isDragging = false;
+    let dragStartR = -1, dragStartC = -1;
+    let dragStartX = 0, dragStartY = 0;
+    let enemyBoardMinimized = true;
+    let playerAutoPlay = false;
 
-    function shakeScreen(container) {
-      container.classList.remove('shake');
-      void container.offsetWidth;
-      container.classList.add('shake');
-      setTimeout(() => container.classList.remove('shake'), 200);
-    }
-
-    function hapticPulse(pattern) { if ('vibrate' in navigator) { try { navigator.vibrate(pattern); } catch(e) {} } }
-
-    // ========================================================================
-    // HIGH SCORE (Solo only)
-    // ========================================================================
-    let highScore = parseInt(localStorage.getItem('blockblast_best') || '0', 10);
-
-    // ========================================================================
-    // SOLO MODE
-    // ========================================================================
-    const soloGame = new GameState();
-    let soloDragInfo = { isDragging: false, slotIndex: null, piece: null, startX: 0, startY: 0 };
-    let soloActiveGridPoints = [];
-
-    const soloBoardEl = document.getElementById('solo-board');
-    const soloBoardContainer = document.getElementById('solo-board-container');
-    const soloSlots = [0,1,2].map(i => document.getElementById('solo-slot-'+i));
-    const soloScore = document.getElementById('solo-score');
-    const soloCombo = document.getElementById('solo-combo');
-    const soloComboBar = document.getElementById('solo-combo-bar');
-    const soloTip = document.getElementById('solo-tip');
-    const soloRescue = document.getElementById('solo-rescue-pill');
-    const dragGhost = document.getElementById('drag-ghost');
-
-    function soloInit() {
-      soloGame.board = Array(8).fill(null).map(() => Array(8).fill(null));
-      soloGame.score = 0;
-      soloGame.combo = 0;
-      soloGame.isGameOver = false;
-      soloGame.activePieces = [null, null, null];
-      soloScore.textContent = '0';
-      soloCombo.textContent = 'x1';
-      soloComboBar.style.width = '0%';
-      soloRescue.classList.add('hidden');
-      soloTip.textContent = "Drag shapes from the top tray onto the board!";
-      soloTip.className = "text-slate-400 text-[10px] font-medium";
-      buildBoardUI(soloBoardEl);
-      drawBoardState(soloBoardEl, soloGame.board);
-      soloGenerateSet();
-    }
-
-    function soloGenerateSet() {
-      soloGame.generateNextSet();
-      for (let i = 0; i < 3; i++) {
-        renderPieceInSlot(soloSlots[i], soloGame.activePieces[i], 14, null);
-        // Add drag events
-        if (soloGame.activePieces[i]) {
-          const container = soloSlots[i].children[0];
-          if (container) {
-            container.addEventListener('mousedown', (e) => soloStartDrag(e, i, soloGame.activePieces[i], false));
-            container.addEventListener('touchstart', (e) => soloStartDrag(e, i, soloGame.activePieces[i], true), { passive: false });
-          }
-        }
-      }
-      soloCheckGameOver();
-    }
-
-    function soloStartDrag(e, slotIdx, piece, isTouch) {
-      if (isTouch && e.cancelable) e.preventDefault();
-      if (soloGame.isGameOver) return;
-      sfx.init();
-      soloDragInfo.isDragging = true;
-      soloDragInfo.slotIndex = slotIdx;
-      soloDragInfo.piece = piece;
-      const cx = isTouch ? e.touches[0].clientX : e.clientX;
-      const cy = isTouch ? e.touches[0].clientY : e.clientY;
-      soloDragInfo.startX = cx; soloDragInfo.startY = cy;
-      if (soloSlots[slotIdx].children[0]) soloSlots[slotIdx].children[0].style.opacity = '0.25';
-      createGhostMarkup(piece, 14);
-      dragGhost.classList.remove('hidden');
-      updateGhostPosition(cx, cy, 'solo');
-      if (isTouch) {
-        window.addEventListener('touchmove', soloOnTouchMove, { passive: false });
-        window.addEventListener('touchend', soloOnDragEnd);
-      } else {
-        window.addEventListener('mousemove', soloOnMouseMove);
-        window.addEventListener('mouseup', soloOnDragEnd);
-      }
-    }
-
-    function soloOnMouseMove(e) { if (!soloDragInfo.isDragging) return; updateGhostPosition(e.clientX, e.clientY, 'solo'); }
-    function soloOnTouchMove(e) {
-      if (!soloDragInfo.isDragging) return;
-      if (e.cancelable) e.preventDefault();
-      const t = e.touches[0];
-      updateGhostPosition(t.clientX, t.clientY, 'solo');
-    }
-
-    function createGhostMarkup(piece, cellSize = 14) {
-      dragGhost.innerHTML = '';
-      const grid = document.createElement('div');
-      grid.className = 'grid gap-0.5 dragging-preview';
-      grid.style.gridTemplateColumns = `repeat(${piece.size[0]}, ${cellSize}px)`;
-      grid.style.gridTemplateRows = `repeat(${piece.size[1]}, ${cellSize}px)`;
-      const gridMap = Array(piece.size[1]).fill(0).map(() => Array(piece.size[0]).fill(false));
-      piece.cells.forEach(([cx, cy]) => { gridMap[cy][cx] = true; });
-      for (let y = 0; y < piece.size[1]; y++) {
-        for (let x = 0; x < piece.size[0]; x++) {
-          const block = document.createElement('div');
-          block.style.width = cellSize + 'px';
-          block.style.height = cellSize + 'px';
-          block.className = 'rounded-sm';
-          if (gridMap[y][x]) {
-            const config = COLORS[piece.color];
-            block.style.backgroundColor = config.fill;
-            block.style.borderColor = config.border;
-            block.style.borderWidth = '2px';
-            block.style.boxShadow = `0 4px 6px -1px ${config.glow}, inset 0 2px 4px rgba(255,255,255,0.3)`;
-          } else { block.style.opacity = '0'; }
-          grid.appendChild(block);
-        }
-      }
-      dragGhost.appendChild(grid);
-    }
-
-    function updateGhostPosition(clientX, clientY, mode) {
-      const boardEl = mode === 'solo' ? soloBoardEl : document.getElementById('vs-player-board');
-      const boardCont = mode === 'solo' ? soloBoardContainer : document.getElementById('vs-player-board-container');
-      const rect = boardEl.getBoundingClientRect();
-      const cellSize = rect.width / 8;
-      const threshold = 15;
-      const isOver = clientX >= rect.left - threshold && clientX <= rect.right + threshold && clientY >= rect.top - threshold && clientY <= rect.bottom + threshold;
-      let left, top;
-      if (isOver) {
-        const colIdx = Math.floor((clientX - rect.left) / cellSize);
-        const rowIdx = Math.floor((clientY - rect.top) / cellSize);
-        left = rect.left + (colIdx * cellSize);
-        top = rect.top + (rowIdx * cellSize);
-        calculatePlacementPreview(clientX, clientY, true, mode);
-      } else {
-        const offsetTouchY = -70;
-        left = clientX - (dragGhost.offsetWidth / 2);
-        top = clientY - (dragGhost.offsetHeight / 2) + offsetTouchY;
-        calculatePlacementPreview(clientX, clientY + offsetTouchY, false, mode);
-      }
-      dragGhost.style.left = left + 'px';
-      dragGhost.style.top = top + 'px';
-    }
-
-    function calculatePlacementPreview(targetX, targetY, snapped, mode) {
-      const boardEl = mode === 'solo' ? soloBoardEl : document.getElementById('vs-player-board');
-      const gameState = mode === 'solo' ? soloGame : vsPlayerGame;
-      const dragInfo = mode === 'solo' ? soloDragInfo : vsDragInfo;
-      clearPreviewShadows(mode);
-      const rect = boardEl.getBoundingClientRect();
-      const cellSize = rect.width / 8;
-      const colIdx = Math.floor((targetX - rect.left) / cellSize);
-      const rowIdx = Math.floor((targetY - rect.top) / cellSize);
-      const cells = [];
-      let allValid = true;
-      for (const [cx, cy] of dragInfo.piece.cells) {
-        const br = rowIdx + cy, bc = colIdx + cx;
-        if (br >= 0 && br < 8 && bc >= 0 && bc < 8) {
-          cells.push({ r: br, c: bc });
-          if (gameState.board[br][bc] !== null) allValid = false;
-        } else { allValid = false; }
-      }
-      if (cells.length === dragInfo.piece.cells.length) {
-        if (mode === 'solo') { soloActiveGridPoints = cells; } else { vsActiveGridPoints = cells; }
-        cells.forEach(({ r, c }) => {
-          const idx = r * 8 + c;
-          const cell = boardEl.children[idx];
-          if (allValid) {
-            cell.style.backgroundColor = COLORS[dragInfo.piece.color].fill;
-            cell.style.opacity = '0.7';
-            cell.classList.add('pulse-glow');
-          } else {
-            cell.style.backgroundColor = 'rgba(239, 68, 68, 0.65)';
-          }
-        });
-      } else {
-        if (mode === 'solo') { soloActiveGridPoints = []; } else { vsActiveGridPoints = []; }
-      }
-    }
-
-    function clearPreviewShadows(mode) {
-      const boardEl = mode === 'solo' ? soloBoardEl : document.getElementById('vs-player-board');
-      const gameState = mode === 'solo' ? soloGame : vsPlayerGame;
-      drawBoardState(boardEl, gameState.board);
-      for (let i = 0; i < boardEl.children.length; i++) {
-        boardEl.children[i].style.opacity = '1';
-        boardEl.children[i].classList.remove('pulse-glow');
-      }
-    }
-
-    function soloOnDragEnd(e) {
-      if (!soloDragInfo.isDragging) return;
-      window.removeEventListener('mousemove', soloOnMouseMove);
-      window.removeEventListener('mouseup', soloOnDragEnd);
-      window.removeEventListener('touchmove', soloOnTouchMove);
-      window.removeEventListener('touchend', soloOnDragEnd);
-      dragGhost.classList.add('hidden');
-      const slotIdx = soloDragInfo.slotIndex;
-      if (soloSlots[slotIdx].children[0]) soloSlots[slotIdx].children[0].style.opacity = '1';
-      if (soloActiveGridPoints.length === soloDragInfo.piece.cells.length) {
-        let canDrop = true;
-        for (const { r, c } of soloActiveGridPoints) { if (soloGame.board[r][c] !== null) { canDrop = false; break; } }
-        if (canDrop) {
-          const color = soloDragInfo.piece.color;
-          soloActiveGridPoints.forEach(({ r, c }) => { soloGame.board[r][c] = color; });
-          soloGame.activePieces[slotIdx] = null;
-          soloSlots[slotIdx].innerHTML = '';
-          sfx.playPlace();
-          hapticPulse(15);
-          drawBoardState(soloBoardEl, soloGame.board);
-          soloActiveGridPoints = [];
-          soloProcessLines();
-          const remaining = soloGame.activePieces.filter(p => p !== null).length;
-          if (remaining === 0) { soloGenerateSet(); }
-          else { soloCheckGameOver(); }
-        } else {
-          sfx.playPlace();
-        }
-      }
-      soloDragInfo.isDragging = false;
-      soloDragInfo.slotIndex = null;
-      soloDragInfo.piece = null;
-      soloActiveGridPoints = [];
-      clearPreviewShadows('solo');
-    }
-
-    function soloProcessLines() {
-      const cleared = soloGame.processLines();
-      if (cleared > 0) {
-        const rows = []; const cols = [];
-        // Re-derive from combo (lines cleared)
-        // (Already processed in processLines)
-        document.getElementById('solo-score').textContent = soloGame.score;
-        soloCombo.textContent = `x${soloGame.combo}`;
-        soloComboBar.style.width = `${Math.min(soloGame.combo * 15, 100)}%`;
-        shakeScreen(soloBoardContainer);
-        triggerClearingVFX(soloBoardEl, rows, cols, soloGame.combo);
-        if (soloGame.combo >= 4) sfx.playComboMax(); else sfx.playClear(soloGame.combo);
-        hapticPulse(cleared * 20);
-        setTimeout(() => {
-          drawBoardState(soloBoardEl, soloGame.board);
-          saveHighScoreSolo();
-          updateSoloDifficulty();
-        }, 150);
-        resetSoloComboTimeout();
-      } else {
-        if (soloGame.combo > 0) { soloGame.combo = Math.max(0, soloGame.combo - 1); soloCombo.textContent = `x${Math.max(1, soloGame.combo)}`; soloComboBar.style.width = `${Math.min(soloGame.combo * 15, 100)}%`; }
-      }
-    }
-
-    function resetSoloComboTimeout() {
-      if (soloGame.comboTimer) clearTimeout(soloGame.comboTimer);
-      soloGame.comboTimer = setTimeout(() => { soloComboBar.style.width = '0%'; }, 5000);
-    }
-
-    function updateSoloDifficulty() {
-      const stats = soloGame.analyzeBoardDifficulty();
-      if (stats.isDangerous && !document.querySelector('#solo-rescue-pill:not(.hidden)')) {
-        soloRescue.classList.remove('hidden');
-        soloTip.textContent = "🚀 Rescue System: Easier shapes enabled!";
-        soloTip.className = "text-amber-400 text-[10px] font-semibold animate-pulse";
-      } else if (!stats.isDangerous) {
-        soloRescue.classList.add('hidden');
-        soloTip.textContent = "Drag shapes from the top tray onto the board!";
-        soloTip.className = "text-slate-400 text-[10px] font-medium";
-      }
-    }
-
-    function soloCheckGameOver() {
-      if (soloGame.checkGameOver()) {
-        sfx.playGameOver();
-        hapticPulse([50, 100, 50, 150]);
-        document.getElementById('modal-score').textContent = soloGame.score;
-        document.getElementById('modal-high').textContent = highScore;
-        document.getElementById('modal-icon').innerHTML = '💀';
-        document.getElementById('modal-title').textContent = 'NO MOVES';
-        document.getElementById('modal-desc').textContent = 'The grid is too cluttered and none of your shapes fit.';
-        document.getElementById('modal-retry').onclick = () => { hideModal('game-over-modal'); soloInit(); };
-        document.getElementById('modal-menu').onclick = () => { hideModal('game-over-modal'); showScreen('mode-screen'); };
-        showModal('game-over-modal');
-      }
-    }
-
-    function saveHighScoreSolo() {
-      if (soloGame.score > highScore) {
-        highScore = soloGame.score;
-        document.getElementById('solo-high').textContent = highScore;
-        localStorage.setItem('blockblast_best', highScore.toString());
-      }
-    }
-
-    // ========================================================================
-    // VS AI MODE
-    // ========================================================================
-    const vsPlayerGame = new GameState();
-    const vsAIGame = new GameState();
-    let vsTurn = 'player'; // 'player' or 'ai'
-    let vsGameActive = false;
-    let vsWaitingForAI = false;
-
-    const vsPlayerBoard = document.getElementById('vs-player-board');
-    const vsPlayerBoardContainer = document.getElementById('vs-player-board-container');
-    const vsAIBoard = document.getElementById('vs-ai-board');
-    const vsAIBoardContainer = document.getElementById('vs-ai-board-container');
-    const vsPlayerSlots = [0,1,2].map(i => document.getElementById('vs-player-slot-'+i));
-    const vsAISlots = [0,1,2].map(i => document.getElementById('vs-ai-slot-'+i));
-    const vsPlayerScore = document.getElementById('vs-player-score');
-    const vsAIScore = document.getElementById('vs-ai-score');
-    const vsTurnIndicator = document.getElementById('vs-turn-indicator');
-    const vsTip = document.getElementById('vs-tip');
-
-    let vsDragInfo = { isDragging: false, slotIndex: null, piece: null, startX: 0, startY: 0 };
-    let vsActiveGridPoints = [];
-
-    function vsInit() {
-      vsPlayerGame.board = Array(8).fill(null).map(() => Array(8).fill(null));
-      vsPlayerGame.score = 0;
-      vsPlayerGame.combo = 0;
-      vsPlayerGame.isGameOver = false;
-      vsPlayerGame.activePieces = [null, null, null];
-      vsAIGame.board = Array(8).fill(null).map(() => Array(8).fill(null));
-      vsAIGame.score = 0;
-      vsAIGame.combo = 0;
-      vsAIGame.isGameOver = false;
-      vsAIGame.activePieces = [null, null, null];
-      vsTurn = 'player';
-      vsGameActive = true;
-      vsWaitingForAI = false;
-      vsPlayerScore.textContent = '0';
-      vsAIScore.textContent = '0';
-      vsTurnIndicator.textContent = 'Your Turn';
-      vsTurnIndicator.className = 'text-[11px] bg-emerald-700/60 px-2 py-0.5 rounded-full font-bold';
-      vsTip.textContent = 'Place a shape, then the AI takes its turn!';
-      vsTip.className = 'text-slate-400 text-[9px] font-medium';
-      buildBoardUI(vsPlayerBoard);
-      buildBoardUI(vsAIBoard);
-      drawBoardState(vsPlayerBoard, vsPlayerGame.board);
-      drawBoardState(vsAIBoard, vsAIGame.board);
-      vsGenerateSet('player');
-      vsGenerateSet('ai');
-      // AI pieces are just visual - we auto-generate for AI too
-    }
-
-    function vsGenerateSet(who) {
-      const game = who === 'player' ? vsPlayerGame : vsAIGame;
-      const slots = who === 'player' ? vsPlayerSlots : vsAISlots;
-      game.generateNextSet();
-      for (let i = 0; i < 3; i++) {
-        if (who === 'player') {
-          renderPieceInSlot(slots[i], game.activePieces[i], 12, null);
-          const container = slots[i].children[0];
-          if (container && game.activePieces[i]) {
-            // Remove old listeners and add new ones
-            const newContainer = container.cloneNode(true);
-            slots[i].innerHTML = '';
-            renderPieceInSlot(slots[i], game.activePieces[i], 12, null);
-            const newEl = slots[i].children[0];
-            if (newEl) {
-              newEl.addEventListener('mousedown', (e) => vsStartDrag(e, i, game.activePieces[i], false));
-              newEl.addEventListener('touchstart', (e) => vsStartDrag(e, i, game.activePieces[i], true), { passive: false });
+    // ============================================================
+    // 5. MATCH-3 ENGINE (Player 8x8)
+    // ============================================================
+    function createPlayerBoard() {
+        playerBoard = [];
+        for (let r = 0; r < GRID_SIZE; r++) {
+            playerBoard[r] = [];
+            for (let c = 0; c < GRID_SIZE; c++) {
+                let types = [1, 2, 3, 4, 5];
+                if (c >= 2) { const t = playerBoard[r][c-1].type; if (t === playerBoard[r][c-2]?.type) types = types.filter(x => x !== t); }
+                if (r >= 2) { const t = playerBoard[r-1][c].type; if (t === playerBoard[r-2]?.[c]?.type) types = types.filter(x => x !== t); }
+                playerBoard[r][c] = { r, c, type: types[Math.floor(Math.random() * types.length)], matched: false };
             }
-          }
-        } else {
-          renderAIPieceInSlot(slots[i], game.activePieces[i], 9);
         }
-      }
-      if (who === 'player') vsCheckGameOver('player');
-      else vsCheckGameOver('ai');
     }
 
-    function vsStartDrag(e, slotIdx, piece, isTouch) {
-      if (isTouch && e.cancelable) e.preventDefault();
-      if (!vsGameActive || vsTurn !== 'player' || vsWaitingForAI || vsPlayerGame.isGameOver) return;
-      sfx.init();
-      vsDragInfo.isDragging = true;
-      vsDragInfo.slotIndex = slotIdx;
-      vsDragInfo.piece = piece;
-      const cx = isTouch ? e.touches[0].clientX : e.clientX;
-      const cy = isTouch ? e.touches[0].clientY : e.clientY;
-      vsDragInfo.startX = cx; vsDragInfo.startY = cy;
-      if (vsPlayerSlots[slotIdx].children[0]) vsPlayerSlots[slotIdx].children[0].style.opacity = '0.25';
-      createGhostMarkup(piece, 12);
-      dragGhost.classList.remove('hidden');
-      updateGhostPosition(cx, cy, 'vs');
-      if (isTouch) {
-        window.addEventListener('touchmove', vsOnTouchMove, { passive: false });
-        window.addEventListener('touchend', vsOnDragEnd);
-      } else {
-        window.addEventListener('mousemove', vsOnMouseMove);
-        window.addEventListener('mouseup', vsOnDragEnd);
-      }
-    }
-
-    function vsOnMouseMove(e) { if (!vsDragInfo.isDragging) return; updateGhostPosition(e.clientX, e.clientY, 'vs'); }
-    function vsOnTouchMove(e) {
-      if (!vsDragInfo.isDragging) return;
-      if (e.cancelable) e.preventDefault();
-      const t = e.touches[0];
-      updateGhostPosition(t.clientX, t.clientY, 'vs');
-    }
-
-    function vsOnDragEnd(e) {
-      if (!vsDragInfo.isDragging) return;
-      window.removeEventListener('mousemove', vsOnMouseMove);
-      window.removeEventListener('mouseup', vsOnDragEnd);
-      window.removeEventListener('touchmove', vsOnTouchMove);
-      window.removeEventListener('touchend', vsOnDragEnd);
-      dragGhost.classList.add('hidden');
-      const slotIdx = vsDragInfo.slotIndex;
-      if (vsPlayerSlots[slotIdx].children[0]) vsPlayerSlots[slotIdx].children[0].style.opacity = '1';
-      if (vsActiveGridPoints.length === vsDragInfo.piece.cells.length) {
-        let canDrop = true;
-        for (const { r, c } of vsActiveGridPoints) { if (vsPlayerGame.board[r][c] !== null) { canDrop = false; break; } }
-        if (canDrop) {
-          const color = vsDragInfo.piece.color;
-          vsActiveGridPoints.forEach(({ r, c }) => { vsPlayerGame.board[r][c] = color; });
-          vsPlayerGame.activePieces[slotIdx] = null;
-          vsPlayerSlots[slotIdx].innerHTML = '';
-          sfx.playPlace();
-          hapticPulse(15);
-          drawBoardState(vsPlayerBoard, vsPlayerGame.board);
-          vsActiveGridPoints = [];
-          vsProcessLines('player');
-          const remaining = vsPlayerGame.activePieces.filter(p => p !== null).length;
-          if (remaining === 0) { vsGenerateSet('player'); }
-          else { vsCheckGameOver('player'); }
-          // Switch turn to AI if game is still active
-          if (vsGameActive && !vsPlayerGame.isGameOver) {
-            vsStartAITurn();
-          }
-        } else {
-          sfx.playPlace();
+    function createEnemyBoard() {
+        enemyBoard = [];
+        for (let r = 0; r < ENEMY_GRID_SIZE; r++) {
+            enemyBoard[r] = [];
+            for (let c = 0; c < ENEMY_GRID_SIZE; c++) {
+                let types = [1, 2, 3, 4, 5];
+                if (c >= 2) { const t = enemyBoard[r][c-1].type; if (t === enemyBoard[r][c-2]?.type) types = types.filter(x => x !== t); }
+                if (r >= 2) { const t = enemyBoard[r-1][c].type; if (t === enemyBoard[r-2]?.[c]?.type) types = types.filter(x => x !== t); }
+                enemyBoard[r][c] = { r, c, type: types[Math.floor(Math.random() * types.length)], matched: false };
+            }
         }
-      }
-      vsDragInfo.isDragging = false;
-      vsDragInfo.slotIndex = null;
-      vsDragInfo.piece = null;
-      vsActiveGridPoints = [];
-      clearPreviewShadows('vs');
     }
 
-    function vsProcessLines(who) {
-      const game = who === 'player' ? vsPlayerGame : vsAIGame;
-      const boardEl = who === 'player' ? vsPlayerBoard : vsAIBoard;
-      const boardCont = who === 'player' ? vsPlayerBoardContainer : vsAIBoardContainer;
-      const scoreEl = who === 'player' ? vsPlayerScore : vsAIScore;
-      const cleared = game.processLines();
-      if (cleared > 0) {
-        scoreEl.textContent = game.score;
-        shakeScreen(boardCont);
-        triggerClearingVFX(boardEl, [], [], game.combo);
-        if (game.combo >= 4) sfx.playComboMax(); else sfx.playClear(game.combo);
-        hapticPulse(cleared * 20);
-        setTimeout(() => drawBoardState(boardEl, game.board), 150);
-      }
-    }
-
-    function vsCheckGameOver(who) {
-      const game = who === 'player' ? vsPlayerGame : vsAIGame;
-      if (game.checkGameOver()) {
-        game.isGameOver = true;
-        // Check if the other player is also game over
-        const other = who === 'player' ? vsAIGame : vsPlayerGame;
-        if (other.isGameOver) {
-          vsEndGame();
-        } else if (who === 'player') {
-          // Player is game over, AI might still be playing (but in this version, AI turn hasn't happened yet)
-          vsEndGame();
-        } else {
-          // AI is game over, check if player is too
-          if (vsPlayerGame.isGameOver) {
-            vsEndGame();
-          } else {
-            // Player wins!
-            vsEndGame();
-          }
+    function renderPlayerBoard() {
+        const g = document.getElementById('player-match3-grid');
+        g.innerHTML = '';
+        for (let r = 0; r < GRID_SIZE; r++) {
+            for (let c = 0; c < GRID_SIZE; c++) {
+                const t = playerBoard[r][c];
+                const d = document.createElement('div');
+                d.setAttribute('data-row', r);
+                d.setAttribute('data-col', c);
+                let cls = 'relative flex items-center justify-center rounded-lg cursor-pointer transition-all duration-200 select-none aspect-square font-sans text-xl md:text-2xl border-2';
+                
+                if (t.type === 6) {
+                    d.style.background = 'radial-gradient(circle, #f43f5e, #eab308, #10b981, #3b82f6, #8b5cf6)';
+                    cls += ' border-slate-800/40';
+                } else if (t.isFlame) {
+                    // Flame tile: keep original type but add border effect ONLY - NO BACKGROUND
+                    d.className = 'relative flex items-center justify-center rounded-lg cursor-pointer transition-all duration-200 select-none aspect-square font-sans text-xl md:text-2xl border-2 border-orange-500';
+                    d.style.background = 'none';
+                    d.style.boxShadow = '0 0 8px #ff6b35, inset 0 0 6px #ff6b35';
+                } else {
+                    const bg = {1:'bg-red-500/20 text-red-300',2:'bg-blue-500/20 text-blue-300',3:'bg-green-500/20 text-green-300',4:'bg-yellow-500/20 text-yellow-300',5:'bg-purple-500/20 text-purple-300'};
+                    cls += ' ' + (bg[t.type] || 'bg-slate-800');
+                    cls += ' border-slate-800/40';
+                }
+                d.className = cls;
+                d.innerText = SYMBOL_MAP[t.type] || '';
+                if (selectedTile && selectedTile.r === r && selectedTile.c === c) d.classList.add('tile-active');
+                g.appendChild(d);
+            }
         }
-      }
     }
 
-    function vsStartAITurn() {
-      if (!vsGameActive || vsAIGame.isGameOver) {
-        vsEndGame();
-        return;
-      }
-      vsTurn = 'ai';
-      vsWaitingForAI = true;
-      vsTurnIndicator.textContent = 'AI Thinking...';
-      vsTurnIndicator.className = 'text-[11px] bg-amber-700/60 px-2 py-0.5 rounded-full font-bold ai-thinking';
-      vsTip.textContent = '🤖 AI is calculating the best move...';
-      
-      // Disable player interaction by showing "waiting" state
-      vsPlayerSlots.forEach(slot => { if (slot.children[0]) slot.children[0].style.pointerEvents = 'none'; });
-
-      // Delay AI move for realism
-      setTimeout(() => {
-        vsExecuteAIMove();
-      }, 600 + Math.random() * 400);
+    function checkPlayerMatches() {
+        let matched = [];
+        for (let r = 0; r < GRID_SIZE; r++) {
+            let len = 1, type = -1, sc = 0;
+            for (let c = 0; c < GRID_SIZE; c++) {
+                const ct = playerBoard[r][c].type;
+                if (c === 0) { type = ct; len = 1; sc = 0; }
+                else if (ct === type && ct !== 6) { len++; }
+                else {
+                    if (len >= 3) {
+                        const mid = Math.floor(len / 2);
+                        for (let i = sc; i < sc+len; i++) {
+                            matched.push({r, c:i, type, matchLength: len, isMiddle: (i === sc + mid)});
+                        }
+                    }
+                    type = ct; len = 1; sc = c;
+                }
+            }
+            if (len >= 3) {
+                const mid = Math.floor(len / 2);
+                for (let i = sc; i < sc+len; i++) {
+                    matched.push({r, c:i, type, matchLength: len, isMiddle: (i === sc + mid)});
+                }
+            }
+        }
+        for (let c = 0; c < GRID_SIZE; c++) {
+            let len = 1, type = -1, sr = 0;
+            for (let r = 0; r < GRID_SIZE; r++) {
+                const ct = playerBoard[r][c].type;
+                if (r === 0) { type = ct; len = 1; sr = 0; }
+                else if (ct === type && ct !== 6) { len++; }
+                else {
+                    if (len >= 3) {
+                        const mid = Math.floor(len / 2);
+                        for (let i = sr; i < sr+len; i++) {
+                            matched.push({r:i, c, type, matchLength: len, isMiddle: (i === sr + mid)});
+                        }
+                    }
+                    type = ct; len = 1; sr = r;
+                }
+            }
+            if (len >= 3) {
+                const mid = Math.floor(len / 2);
+                for (let i = sr; i < sr+len; i++) {
+                    matched.push({r:i, c, type, matchLength: len, isMiddle: (i === sr + mid)});
+                }
+            }
+        }
+        const u = [], v = {};
+        matched.forEach(m => { 
+            const k = `${m.r},${m.c}`; 
+            if (!v[k]) { 
+                v[k] = true; 
+                u.push(m); 
+            } else { 
+                const e = u.find(x => x.r === m.r && x.c === m.c); 
+                if (e && m.matchLength > e.matchLength) {
+                    e.matchLength = m.matchLength;
+                    e.isMiddle = m.isMiddle;
+                }
+            }
+        });
+        return u;
     }
 
-    function vsExecuteAIMove() {
-      if (!vsGameActive || vsAIGame.isGameOver) {
-        vsEndGame();
-        return;
-      }
+    function attemptPlayerSwap(r1, c1, r2, c2) {
+        if (isProcessingMatch) return;
+        isProcessingMatch = true;
+        const tile1 = playerBoard[r1][c1], tile2 = playerBoard[r2][c2];
 
-      const bestMove = AI.findBestMove(vsAIGame);
-      
-      if (bestMove) {
-        // Place the piece on AI board
-        const piece = bestMove.piece;
-        const row = bestMove.row;
-        const col = bestMove.col;
+        // Rainbow swap
+        if (tile1.type === 6 || tile2.type === 6) {
+            const otherType = tile1.type === 6 ? tile2.type : tile1.type;
+            const matches = [];
+            let count = 0;
+            for (let r = 0; r < GRID_SIZE; r++) {
+                for (let c = 0; c < GRID_SIZE; c++) {
+                    if (playerBoard[r][c].type === otherType) {
+                        matches.push({ r, c, type: otherType, matchLength: 4 });
+                        count++;
+                    }
+                }
+            }
+            const rr = tile1.type === 6 ? r1 : r2;
+            const rc = tile1.type === 6 ? c1 : c2;
+            matches.push({ r: rr, c: rc, type: otherType, matchLength: 5 });
+
+            addLog(`🌈 Rainbow clears all ${SYMBOL_MAP[otherType]}! (${count} tiles)`);
+            triggerBanner(`Rainbow! ${count} tiles cleared!`);
+
+            if (otherType === 5) {
+                addMana(100);
+            } else {
+                let mult = 1;
+                if (count >= 8) mult = 4;
+                else if (count >= 5) mult = 2;
+                spawnUnitSquad('player', otherType, mult);
+                airshipDropQueue.push({ type: otherType, delayTimer: 2.5 });
+            }
+            selectedTile = null;
+            resolvePlayerMatches(matches, 1);
+            return;
+        }
+
+        // Normal swap
+        const t = playerBoard[r1][c1].type;
+        playerBoard[r1][c1].type = playerBoard[r2][c2].type;
+        playerBoard[r2][c2].type = t;
         
-        for (const [cx, cy] of piece.cells) {
-          vsAIGame.board[row + cy][col + cx] = piece.color;
+        renderPlayerBoard();
+        setTimeout(() => {
+            const m = checkPlayerMatches();
+            if (m.length > 0) { 
+                selectedTile = null; 
+                resolvePlayerMatches(m); 
+            }
+            else {
+                const tx = playerBoard[r1][c1].type;
+                playerBoard[r1][c1].type = playerBoard[r2][c2].type;
+                playerBoard[r2][c2].type = tx;
+                selectedTile = null;
+                renderPlayerBoard();
+                isProcessingMatch = false;
+            }
+        }, 250);
+    }
+
+    function resolvePlayerMatches(matches, combo) {
+        if (combo === undefined) combo = 1;
+        if (matches.length === 0) { isProcessingMatch = false; return; }
+        const gc = document.getElementById('player-match3-grid').children;
+        const counts = {1:0, 2:0, 3:0, 4:0, 5:0};
+        let formedRainbows = [];
+        
+        matches.forEach(m => {
+            const idx = m.r * GRID_SIZE + m.c;
+            if (gc[idx]) gc[idx].classList.add('tile-matched');
+            playerBoard[m.r][m.c].matched = true;
+            counts[m.type] = (counts[m.type] || 0) + 1;
+            if (m.matchLength >= 5 && m.isMiddle && !formedRainbows.find(x => x.r === m.r && x.c === m.c)) {
+                formedRainbows.push({ r: m.r, c: m.c });
+            }
+        });
+        
+        maxComboReached = Math.max(maxComboReached, combo);
+        Object.keys(counts).forEach(k => {
+            const n = counts[k], type = +k;
+            if (n >= 3) {
+                let mult = 1;
+                if (n === 4) mult = 1.5;  // 1.5x for 4-match
+                if (n >= 5) mult = 4;
+                if (type === 5) { addMana(n * 8); }
+                else if (type >= 1 && type <= 4) { spawnUnitSquad('player', type, Math.ceil(mult)); addScore(n * 15 * combo); }
+            }
+        });
+        setTimeout(() => {
+            for (let c = 0; c < GRID_SIZE; c++) {
+                let wr = GRID_SIZE - 1;
+                for (let r = GRID_SIZE - 1; r >= 0; r--) {
+                    if (!playerBoard[r][c].matched) { playerBoard[wr][c].type = playerBoard[r][c].type; wr--; }
+                }
+                for (let r = wr; r >= 0; r--) { playerBoard[r][c].type = [1, 2, 3, 4, 5][Math.floor(Math.random() * 5)]; }
+            }
+            formedRainbows.forEach(x => { playerBoard[x.r][x.c].type = 6; });
+            for (let r = 0; r < GRID_SIZE; r++) for (let c = 0; c < GRID_SIZE; c++) playerBoard[r][c].matched = false;
+            renderPlayerBoard();
+            const next = checkPlayerMatches();
+            if (next.length > 0) { addLog(`CASCADE x${combo + 1}!`); resolvePlayerMatches(next, combo + 1); }
+            else isProcessingMatch = false;
+        }, 300);
+    }
+
+    // ============================================================
+    // 6. DRAG CONTROLS
+    // ============================================================
+    function setupDragControls() {
+        const g = document.getElementById('player-match3-grid');
+        const getTile = (e) => {
+            const t = e.target.closest('[data-row]');
+            return t ? { r: +t.getAttribute('data-row'), c: +t.getAttribute('data-col') } : null;
+        };
+        const handleStart = (x, y, e) => {
+            if (isProcessingMatch || !gameActive) return;
+            const p = getTile(e);
+            if (!p) return;
+            isDragging = true;
+            dragStartR = p.r; dragStartC = p.c;
+            dragStartX = x; dragStartY = y;
+            if (selectedTile) {
+                const r1 = selectedTile.r, c1 = selectedTile.c, r2 = p.r, c2 = p.c;
+                if ((Math.abs(r1-r2)===1 && c1===c2) || (Math.abs(c1-c2)===1 && r1===r2)) {
+                    selectedTile = null; attemptPlayerSwap(r1, c1, r2, c2); isDragging = false; return;
+                } else { selectedTile = playerBoard[p.r][p.c]; }
+            } else { selectedTile = playerBoard[p.r][p.c]; }
+            renderPlayerBoard();
+        };
+        const handleMove = (x, y) => {
+            if (!isDragging || isProcessingMatch || !gameActive) return;
+            const dx = x - dragStartX, dy = y - dragStartY;
+            if (Math.abs(dx) > 30 || Math.abs(dy) > 30) {
+                let tr = dragStartR, tc = dragStartC;
+                if (Math.abs(dx) > Math.abs(dy)) tc += dx > 0 ? 1 : -1;
+                else tr += dy > 0 ? 1 : -1;
+                if (tr >= 0 && tr < GRID_SIZE && tc >= 0 && tc < GRID_SIZE) {
+                    selectedTile = null; attemptPlayerSwap(dragStartR, dragStartC, tr, tc);
+                }
+                isDragging = false;
+            }
+        };
+        const handleEnd = () => { isDragging = false; };
+        g.addEventListener('touchstart', e => { e.preventDefault(); const t = e.touches[0]; handleStart(t.clientX, t.clientY, e); }, { passive: false });
+        g.addEventListener('touchmove', e => { e.preventDefault(); const t = e.touches[0]; handleMove(t.clientX, t.clientY); }, { passive: false });
+        g.addEventListener('touchend', e => { e.preventDefault(); handleEnd(); }, { passive: false });
+        g.addEventListener('mousedown', e => { e.preventDefault(); handleStart(e.clientX, e.clientY, e); });
+        window.addEventListener('mousemove', e => handleMove(e.clientX, e.clientY));
+        window.addEventListener('mouseup', () => handleEnd());
+    }
+
+    // ============================================================
+    // 7. ENEMY AI MATCH-3 (8x8)
+    // ============================================================
+    function createEnemyBoard() {
+        enemyBoard = [];
+        for (let r = 0; r < ENEMY_GRID_SIZE; r++) {
+            enemyBoard[r] = [];
+            for (let c = 0; c < ENEMY_GRID_SIZE; c++) {
+                let types = [1, 2, 3, 4, 5];
+                if (c >= 2) { const t = enemyBoard[r][c-1].type; if (t === enemyBoard[r][c-2]?.type) types = types.filter(x => x !== t); }
+                if (r >= 2) { const t = enemyBoard[r-1][c].type; if (t === enemyBoard[r-2]?.[c]?.type) types = types.filter(x => x !== t); }
+                enemyBoard[r][c] = { r, c, type: types[Math.floor(Math.random() * types.length)], matched: false };
+            }
         }
-        vsAIGame.activePieces[bestMove.pieceIndex] = null;
-        vsAISlots[bestMove.pieceIndex].innerHTML = '';
+    }
+
+    function renderEnemyBoard() {
+        const g = document.getElementById('enemy-match3-grid');
+        g.innerHTML = '';
+        for (let r = 0; r < ENEMY_GRID_SIZE; r++) {
+            for (let c = 0; c < ENEMY_GRID_SIZE; c++) {
+                const t = enemyBoard[r][c];
+                const d = document.createElement('div');
+                d.className = 'enemy-tile aspect-square text-xl md:text-2xl border-2';
+                const bgColors = {1:'rgba(239,68,68,0.3)',2:'rgba(96,165,250,0.3)',3:'rgba(74,222,128,0.3)',4:'rgba(250,204,21,0.3)',5:'rgba(192,132,252,0.3)'};
+                if (t.type === 6) {
+                    d.style.background = 'radial-gradient(circle, #f43f5e, #eab308, #10b981, #3b82f6, #8b5cf6)';
+                    d.className += ' border-slate-800/40';
+                } else if (t.type === 7) {
+                    d.className = 'enemy-tile aspect-square text-xl md:text-2xl border-2 border-orange-500';
+                    d.style.boxShadow = '0 0 8px #ff6b35, inset 0 0 6px #ff6b35';
+                } else {
+                    d.style.background = bgColors[t.type] || 'rgba(30,41,59,0.6)';
+                    d.className += ' border-slate-800/40';
+                }
+                d.innerText = SYMBOL_MAP[t.type] || '';
+                if (t.matched) d.style.opacity = '0.3';
+                g.appendChild(d);
+            }
+        }
+    }
+
+    function checkEnemyMatches() {
+        let matched = [];
+        for (let r = 0; r < ENEMY_GRID_SIZE; r++) {
+            let len = 1, type = -1, sc = 0;
+            for (let c = 0; c < ENEMY_GRID_SIZE; c++) {
+                const ct = enemyBoard[r][c].type;
+                if (c === 0) { type = ct; len = 1; sc = 0; }
+                else if (ct === type && ct !== 6) { len++; }
+                else {
+                    if (len >= 3) for (let i = sc; i < sc+len; i++) matched.push({r, c:i, type, matchLength: len});
+                    type = ct; len = 1; sc = c;
+                }
+            }
+            if (len >= 3) for (let i = sc; i < sc+len; i++) matched.push({r, c:i, type, matchLength: len});
+        }
+        for (let c = 0; c < ENEMY_GRID_SIZE; c++) {
+            let len = 1, type = -1, sr = 0;
+            for (let r = 0; r < ENEMY_GRID_SIZE; r++) {
+                const ct = enemyBoard[r][c].type;
+                if (r === 0) { type = ct; len = 1; sr = 0; }
+                else if (ct === type && ct !== 6) { len++; }
+                else {
+                    if (len >= 3) for (let i = sr; i < sr+len; i++) matched.push({r:i, c, type, matchLength: len});
+                    type = ct; len = 1; sr = r;
+                }
+            }
+            if (len >= 3) for (let i = sr; i < sr+len; i++) matched.push({r:i, c, type, matchLength: len});
+        }
+        const u = [], v = {};
+        matched.forEach(m => { const k = `${m.r},${m.c}`; if (!v[k]) { v[k] = true; u.push(m); } else { const e = u.find(x => x.r === m.r && x.c === m.c); if (e && m.matchLength > e.matchLength) e.matchLength = m.matchLength; } });
+        return u;
+    }
+
+    function resolveEnemyMatches(matches) {
+        if (matches.length === 0) return;
+        const counts = {1:0, 2:0, 3:0, 4:0, 5:0};
+        let formedRainbows = [];
+        matches.forEach(m => {
+            enemyBoard[m.r][m.c].matched = true;
+            counts[m.type] = (counts[m.type] || 0) + 1;
+            if (m.matchLength >= 5 && !formedRainbows.find(x => x.r === m.r && x.c === m.c)) {
+                formedRainbows.push({ r: m.r, c: m.c });
+            }
+        });
+        Object.keys(counts).forEach(k => {
+            const n = counts[k], type = +k;
+            if (n >= 3) {
+                let mult = 1;
+                if (n === 4) mult = 2;
+                if (n >= 5) mult = 4;
+                if (type === 5) { enemyManaProgress = Math.min(100, enemyManaProgress + n * 8); }
+                else if (type >= 1 && type <= 4) { spawnUnitSquad('enemy', type, mult); }
+            }
+        });
+        setTimeout(() => {
+            for (let c = 0; c < ENEMY_GRID_SIZE; c++) {
+                let wr = ENEMY_GRID_SIZE - 1;
+                for (let r = ENEMY_GRID_SIZE - 1; r >= 0; r--) {
+                    if (!enemyBoard[r][c].matched) { enemyBoard[wr][c].type = enemyBoard[r][c].type; wr--; }
+                }
+                for (let r = wr; r >= 0; r--) { enemyBoard[r][c].type = [1, 2, 3, 4, 5][Math.floor(Math.random() * 5)]; }
+            }
+            formedRainbows.forEach(x => { enemyBoard[x.r][x.c].type = 6; });
+            for (let r = 0; r < ENEMY_GRID_SIZE; r++) for (let c = 0; c < ENEMY_GRID_SIZE; c++) enemyBoard[r][c].matched = false;
+            renderEnemyBoard();
+            const next = checkEnemyMatches();
+            if (next.length > 0) resolveEnemyMatches(next);
+        }, 300);
+    }
+
+    function simulateEnemyTurn() {
+        if (!gameActive) return;
         
-        drawBoardState(vsAIBoard, vsAIGame.board);
-        sfx.playPlace();
+        // Check if enemy can summon Thor (100 mana)
+        if (enemyManaProgress >= 100) {
+            enemyManaProgress = 0;
+            spawnUnitSquad('enemy', 5, 1);
+            addLog("⚡ Enemy summoned THOR!");
+            triggerBanner("Enemy Thor!");
+            return;
+        }
         
-        vsProcessLines('ai');
+        // Use smart AI like player autoplay
+        const possibleSwaps = [];
+        for (let r = 0; r < ENEMY_GRID_SIZE; r++) {
+            for (let c = 0; c < ENEMY_GRID_SIZE; c++) {
+                // Try swap right
+                if (c + 1 < ENEMY_GRID_SIZE) {
+                    const t = enemyBoard[r][c].type;
+                    enemyBoard[r][c].type = enemyBoard[r][c+1].type;
+                    enemyBoard[r][c+1].type = t;
+                    const matches = checkEnemyMatches();
+                    const t2 = enemyBoard[r][c].type;
+                    enemyBoard[r][c].type = enemyBoard[r][c+1].type;
+                    enemyBoard[r][c+1].type = t2;
+                    if (matches.length > 0) {
+                        possibleSwaps.push({r, c, r2: r, c2: c+1, matches});
+                    }
+                }
+                // Try swap down
+                if (r + 1 < ENEMY_GRID_SIZE) {
+                    const t = enemyBoard[r][c].type;
+                    enemyBoard[r][c].type = enemyBoard[r+1][c].type;
+                    enemyBoard[r+1][c].type = t;
+                    const matches = checkEnemyMatches();
+                    const t2 = enemyBoard[r][c].type;
+                    enemyBoard[r][c].type = enemyBoard[r+1][c].type;
+                    enemyBoard[r+1][c].type = t2;
+                    if (matches.length > 0) {
+                        possibleSwaps.push({r, c, r2: r+1, c2: c, matches});
+                    }
+                }
+            }
+        }
         
-        // Check if AI still has pieces or needs new ones
-        const remaining = vsAIGame.activePieces.filter(p => p !== null).length;
-        if (remaining === 0) {
-          vsGenerateSet('ai');
+        if (possibleSwaps.length > 0) {
+            // Pick the best swap (most matches or longest match)
+            possibleSwaps.sort((a, b) => {
+                const aScore = a.matches.length + Math.max(...a.matches.map(m => m.matchLength)) * 2;
+                const bScore = b.matches.length + Math.max(...b.matches.map(m => m.matchLength)) * 2;
+                return bScore - aScore;
+            });
+            
+            const best = possibleSwaps[0];
+            // Execute the swap
+            const t = enemyBoard[best.r][best.c].type;
+            enemyBoard[best.r][best.c].type = enemyBoard[best.r2][best.c2].type;
+            enemyBoard[best.r2][best.c2].type = t;
+            renderEnemyBoard();
+            setTimeout(() => { resolveEnemyMatches(best.matches); }, 200);
+            document.getElementById('enemy-board-status').innerText = 'matched!';
+            setTimeout(() => { document.getElementById('enemy-board-status').innerText = 'thinking...'; }, 1000);
         } else {
-          vsCheckGameOver('ai');
+            // Random fallback if no good moves
+            const r = Math.floor(Math.random() * ENEMY_GRID_SIZE);
+            const c = Math.floor(Math.random() * (ENEMY_GRID_SIZE - 1));
+            const t = enemyBoard[r][c].type;
+            enemyBoard[r][c].type = enemyBoard[r][c+1].type;
+            enemyBoard[r][c+1].type = t;
+            renderEnemyBoard();
+            setTimeout(() => {
+                const matches = checkEnemyMatches();
+                if (matches.length > 0) resolveEnemyMatches(matches);
+            }, 300);
         }
-      } else {
-        // AI has no valid moves - this will be caught by checkGameOver
-        vsAIGame.isGameOver = true;
-      }
-
-      // Re-enable player interaction
-      vsPlayerSlots.forEach(slot => { if (slot.children[0]) slot.children[0].style.pointerEvents = 'auto'; });
-
-      // Switch back to player turn
-      vsTurn = 'player';
-      vsWaitingForAI = false;
-      
-      if (!vsGameActive) return;
-
-      // Check if both players are game over
-      if (vsPlayerGame.isGameOver && vsAIGame.isGameOver) {
-        vsEndGame();
-        return;
-      }
-      if (vsPlayerGame.isGameOver) {
-        vsEndGame();
-        return;
-      }
-      if (vsAIGame.isGameOver) {
-        vsEndGame();
-        return;
-      }
-
-      vsTurnIndicator.textContent = 'Your Turn';
-      vsTurnIndicator.className = 'text-[11px] bg-emerald-700/60 px-2 py-0.5 rounded-full font-bold';
-      vsTip.textContent = 'Place a shape, then the AI takes its turn!';
     }
 
-    function vsEndGame() {
-      vsGameActive = false;
-      vsWaitingForAI = false;
-      vsTurnIndicator.textContent = 'Game Over';
-      vsTurnIndicator.className = 'text-[11px] bg-red-700/60 px-2 py-0.5 rounded-full font-bold';
-
-      const pScore = vsPlayerGame.score;
-      const aScore = vsAIGame.score;
-      let resultMsg, resultIcon, resultTitle;
-
-      let winner = '';
-      // Determine winner: whoever is NOT game over wins, or higher score if both game over
-      if (vsPlayerGame.isGameOver && vsAIGame.isGameOver) {
-        if (pScore > aScore) { winner = 'player'; }
-        else if (aScore > pScore) { winner = 'ai'; }
-        else { winner = 'tie'; }
-      } else if (vsPlayerGame.isGameOver) {
-        winner = 'ai';
-      } else if (vsAIGame.isGameOver) {
-        winner = 'player';
-      } else {
-        // If somehow neither is game over but we're called, compare scores
-        if (pScore > aScore) { winner = 'player'; }
-        else if (aScore > pScore) { winner = 'ai'; }
-        else { winner = 'tie'; }
-      }
-
-      if (winner === 'player') {
-        resultTitle = '🎉 YOU WIN!';
-        resultIcon = '🏆';
-        resultMsg = 'You outlasted the AI! Great strategy!';
-        document.getElementById('vs-result-icon').className = 'w-16 h-16 bg-emerald-500/10 border-2 border-emerald-500/30 text-emerald-500 rounded-full flex items-center justify-center mx-auto mb-1 text-2xl';
-        sfx.playWin();
-      } else if (winner === 'ai') {
-        resultTitle = '🤖 AI WINS';
-        resultIcon = '💻';
-        resultMsg = 'The AI was too strong this time. Try again!';
-        document.getElementById('vs-result-icon').className = 'w-16 h-16 bg-rose-500/10 border-2 border-rose-500/30 text-rose-500 rounded-full flex items-center justify-center mx-auto mb-1 text-2xl';
-        sfx.playLose();
-      } else {
-        resultTitle = '⚖️ IT\'S A TIE!';
-        resultIcon = '🤝';
-        resultMsg = 'Evenly matched! One more round?';
-        document.getElementById('vs-result-icon').className = 'w-16 h-16 bg-amber-500/10 border-2 border-amber-500/30 text-amber-500 rounded-full flex items-center justify-center mx-auto mb-1 text-2xl';
-        sfx.playGameOver();
-      }
-
-      document.getElementById('vs-result-title').textContent = resultTitle;
-      document.getElementById('vs-result-icon').innerHTML = resultIcon;
-      document.getElementById('vs-result-desc').textContent = resultMsg;
-      document.getElementById('vs-result-player').textContent = pScore;
-      document.getElementById('vs-result-ai').textContent = aScore;
-
-      document.getElementById('vs-result-retry').onclick = () => {
-        hideModal('vs-result-modal');
-        vsInit();
-      };
-      document.getElementById('vs-result-menu').onclick = () => {
-        hideModal('vs-result-modal');
-        showScreen('mode-screen');
-      };
-
-      showModal('vs-result-modal');
+    function autoPlayPlayer() {
+        if (!playerAutoPlay || isProcessingMatch || !gameActive) return;
+        
+        // Find all possible swaps
+        const possibleSwaps = [];
+        for (let r = 0; r < GRID_SIZE; r++) {
+            for (let c = 0; c < GRID_SIZE; c++) {
+                // Try swap right
+                if (c + 1 < GRID_SIZE) {
+                    const t = playerBoard[r][c].type;
+                    playerBoard[r][c].type = playerBoard[r][c+1].type;
+                    playerBoard[r][c+1].type = t;
+                    const matches = checkPlayerMatches();
+                    const t2 = playerBoard[r][c].type;
+                    playerBoard[r][c].type = playerBoard[r][c+1].type;
+                    playerBoard[r][c+1].type = t2;
+                    if (matches.length > 0) {
+                        possibleSwaps.push({r, c, r2: r, c2: c+1, matches});
+                    }
+                }
+                // Try swap down
+                if (r + 1 < GRID_SIZE) {
+                    const t = playerBoard[r][c].type;
+                    playerBoard[r][c].type = playerBoard[r+1][c].type;
+                    playerBoard[r+1][c].type = t;
+                    const matches = checkPlayerMatches();
+                    const t2 = playerBoard[r][c].type;
+                    playerBoard[r][c].type = playerBoard[r+1][c].type;
+                    playerBoard[r+1][c].type = t2;
+                    if (matches.length > 0) {
+                        possibleSwaps.push({r, c, r2: r+1, c2: c, matches});
+                    }
+                }
+            }
+        }
+        
+        if (possibleSwaps.length > 0) {
+            // Pick the best swap (most matches or longest match)
+            possibleSwaps.sort((a, b) => {
+                const aScore = a.matches.length + Math.max(...a.matches.map(m => m.matchLength)) * 2;
+                const bScore = b.matches.length + Math.max(...b.matches.map(m => m.matchLength)) * 2;
+                return bScore - aScore;
+            });
+            
+            const best = possibleSwaps[0];
+            attemptPlayerSwap(best.r, best.c, best.r2, best.c2);
+        }
     }
 
-    // ========================================================================
-    // UI HELPERS
-    // ========================================================================
-    function showScreen(screenId) {
-      document.getElementById('mode-screen').classList.add('hidden');
-      document.getElementById('solo-ui').classList.add('hidden');
-      document.getElementById('vs-ui').classList.add('hidden');
-      document.getElementById(screenId).classList.remove('hidden');
+    // ============================================================
+    // 8. BATTLEFIELD
+    // ============================================================
+    function spawnUnitSquad(team, type, mult) {
+        const stats = UNIT_STATS[type];
+        const w = cw || 300, h = ch || 200;
+        let sx, sy;
+        if (team === 'player') { sx = w * 0.06 + Math.random() * 15; sy = h * 0.92 - Math.random() * 15; }
+        else { sx = w * 0.94 - Math.random() * 15; sy = h * 0.06 + Math.random() * 15; }
+        createExplosion(sx, sy, team === 'player' ? '#38bdf8' : '#f43f5e', 22);
+        spawnAlerts.push({ x: sx, y: sy - 12, text: `+${mult} ${stats.name}`, color: stats.color, alpha: 1, duration: 1.8 });
+        for (let i = 0; i < mult; i++) {
+            totalUnitsSpawned++;
+            // Set initial waypoint index based on team direction
+            const startWaypointIndex = team === 'player' ? 0 : roadPath.length - 1;
+            units.push({
+                id: Math.random().toString(36).substring(2, 9), team: team, type: type,
+                hp: stats.hp, maxHp: stats.hp, damage: stats.damage, range: stats.range,
+                speed: stats.speed, cooldown: stats.cooldown,
+                flying: stats.flying || false, antiAir: stats.antiAir || false,
+                color: stats.color, symbol: stats.symbol, radius: stats.radius,
+                lastAttackTime: 0, x: sx + (Math.random() * 10 - 5), y: sy + (Math.random() * 10 - 5),
+                isThor: type === 5, shielded: false, shieldHP: 0,
+                currentWaypointIndex: startWaypointIndex
+            });
+        }
+        addLog(`${team === 'player' ? 'Player' : 'Enemy'}: ${mult}x ${stats.name}`);
     }
 
-    function showModal(id) {
-      const el = document.getElementById(id);
-      el.classList.remove('hidden');
-      setTimeout(() => { el.classList.remove('opacity-0'); el.classList.add('opacity-100'); }, 50);
+    function findNearestHostile(unit) {
+        let candidates = units.filter(u => u.team !== unit.team && u.hp > 0);
+        if (candidates.length === 0) return null;
+        if (!unit.flying && !unit.antiAir) candidates = candidates.filter(u => !u.flying);
+        else if (unit.antiAir) candidates = candidates.filter(u => u.flying);
+        else if (unit.flying) {
+            const aa = candidates.filter(u => u.antiAir);
+            if (aa.length > 0) candidates = aa;
+            else { const fly = candidates.filter(u => u.flying); if (fly.length > 0) candidates = fly; }
+        }
+        if (candidates.length === 0) return null;
+        let best = null, bestD = Infinity;
+        candidates.forEach(u => { const d = Math.sqrt((u.x - unit.x)**2 + (u.y - unit.y)**2); if (d < bestD) { bestD = d; best = u; } });
+        return best;
     }
 
-    function hideModal(id) {
-      const el = document.getElementById(id);
-      el.classList.remove('opacity-100');
-      el.classList.add('opacity-0');
-      setTimeout(() => el.classList.add('hidden'), 300);
-    }
-
-    // ========================================================================
-    // AUDIO TOGGLE (shared)
-    // ========================================================================
-    function setupAudioToggle(btnId) {
-      document.getElementById(btnId).addEventListener('click', () => {
-        sfx.init();
-        sfx.muted = !sfx.muted;
-        const btn = document.getElementById(btnId);
-        if (sfx.muted) {
-          btn.textContent = '🔇 Sound Off';
-          btn.className = "px-2 py-1 bg-slate-800/40 hover:bg-slate-700/40 border border-slate-700 text-slate-400 rounded-full transition-all text-[11px] flex items-center justify-center gap-1";
+    function fireWeapon(attacker, target) {
+        if (attacker.type === 4) {
+            projectiles.push({ id: Math.random().toString(), team: attacker.team, type: 'artillery', x: attacker.x, y: attacker.y, targetX: target.x, targetY: target.y, speed: 2.5, damage: attacker.damage, color: '#eab308', radius: 4.5, splashRadius: 45 });
+        } else if (attacker.type === 5) {
+            // Thor fires a huge energy ball that damages everything along its path
+            projectiles.push({ id: Math.random().toString(), team: attacker.team, type: 'thor', x: attacker.x, y: attacker.y, targetX: target.x, targetY: target.y, speed: 4.0, damage: attacker.damage, color: '#c084fc', radius: 12, splashRadius: 35 });
+        } else if (attacker.type === 2 || attacker.type === 3) {
+            projectiles.push({ id: Math.random().toString(), team: attacker.team, type: 'bullet', x: attacker.x, y: attacker.y, targetX: target.x, targetY: target.y, speed: 6.0, damage: attacker.damage, color: attacker.color, radius: 2.5 });
         } else {
-          btn.textContent = '🔊 Sound On';
-          btn.className = "px-2 py-1 bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700 rounded-full transition-all text-[11px] flex items-center justify-center gap-1";
+            target.hp -= attacker.damage; createExplosion(target.x, target.y, '#f87171', 4);
         }
-      });
     }
 
-    // ========================================================================
-    // EVENT BINDINGS
-    // ========================================================================
-    // Mode selection
-    document.getElementById('btn-solo').addEventListener('click', () => {
-      showScreen('solo-ui');
-      soloInit();
-    });
-    document.getElementById('btn-vs-ai').addEventListener('click', () => {
-      showScreen('vs-ui');
-      vsInit();
-    });
-    document.getElementById('solo-back').addEventListener('click', () => {
-      showScreen('mode-screen');
-    });
-    document.getElementById('vs-back').addEventListener('click', () => {
-      vsGameActive = false;
-      showScreen('mode-screen');
+    function applyProjectileDamage(proj) {
+        if (proj.type === 'artillery') {
+            createExplosion(proj.targetX, proj.targetY, '#f59e0b', 24);
+            units.forEach(u => { if (u.team !== proj.team) { const d = Math.sqrt((u.x - proj.targetX)**2 + (u.y - proj.targetY)**2); if (d <= proj.splashRadius) { let dmg = proj.damage * (1 - (d/proj.splashRadius)*0.3); if (u.shielded && u.shieldHP > 0) { const a = Math.min(u.shieldHP, dmg); u.shieldHP -= a; dmg -= a; if (u.shieldHP <= 0) u.shielded = false; } u.hp -= dmg; } } });;
+        } else if (proj.type === 'thor') {
+            // Thor damages everything along its flight path
+            createExplosion(proj.x, proj.y, '#c084fc', 15);
+            units.forEach(u => {
+                if (u.team !== proj.team) {
+                    const d = Math.sqrt((u.x - proj.x)**2 + (u.y - proj.y)**2);
+                    if (d <= proj.splashRadius) {
+                        u.hp -= proj.damage;
+                        createExplosion(u.x, u.y, '#a855f7', 5);
+                    }
+                }
+            });
+        } else {
+            const target = units.find(u => Math.sqrt((u.x - proj.targetX)**2 + (u.y - proj.targetY)**2) < 20);
+            if (target) { let dmg = proj.damage; if (target.shielded && target.shieldHP > 0) { const a = Math.min(target.shieldHP, dmg); target.shieldHP -= a; dmg -= a; if (target.shieldHP <= 0) target.shielded = false; } target.hp -= dmg; }
+        }
+    }
+
+    function damageBase(team, amount) {
+        if (team === 'player') { playerBaseHP = Math.max(0, playerBaseHP - amount); document.getElementById('game-container').classList.add('shake-element'); setTimeout(() => document.getElementById('game-container').classList.remove('shake-element'), 400); }
+        else { enemyBaseHP = Math.max(0, enemyBaseHP - amount); }
+        updateHUD();
+        if (playerBaseHP <= 0) triggerGameOver(false);
+        else if (enemyBaseHP <= 0) triggerGameOver(true);
+    }
+
+    function updateBattlefield(dt) {
+        const sdt = dt * gameSpeed;
+        if (shieldActive) { shieldTimer -= sdt; if (shieldTimer <= 0) { shieldActive = false; units.forEach(u => { if (u.team === 'player') { u.shielded = false; u.shieldHP = 0; } }); addLog("🛡️ Shield expired."); } }
+        for (let i = spawnAlerts.length - 1; i >= 0; i--) { const a = spawnAlerts[i]; a.duration -= sdt; a.y += (a.duration > 1 ? -0.5 : -0.2) * sdt * 60; a.alpha = Math.max(0, a.duration); if (a.duration <= 0) spawnAlerts.splice(i, 1); }
+        for (let i = airshipDropQueue.length - 1; i >= 0; i--) { const d = airshipDropQueue[i]; d.delayTimer -= sdt; if (d.delayTimer <= 0) { spawnUnitSquad('player', d.type, 8); createExplosion(cw/2, ch/2, '#38bdf8', 25); airshipDropQueue.splice(i, 1); } }
+        aiMatchTimer += sdt * 1000; if (aiMatchTimer >= AI_MATCH_INTERVAL) { aiMatchTimer = 0; simulateEnemyTurn(); }
+        for (let i = projectiles.length - 1; i >= 0; i--) { const p = projectiles[i]; const dx = p.targetX - p.x, dy = p.targetY - p.y; const d = Math.sqrt(dx*dx + dy*dy); const step = p.speed * sdt * 60; if (d <= step) { applyProjectileDamage(p); projectiles.splice(i, 1); } else { p.x += (dx/d) * step; p.y += (dy/d) * step; } }
+        units.forEach(u => {
+            const hostile = findNearestHostile(u);
+            if (hostile) {
+                const dx = hostile.x - u.x, dy = hostile.y - u.y, d = Math.sqrt(dx*dx + dy*dy);
+                if (d > u.range) {
+                    if (u.flying) { u.x += (dx/d) * u.speed * sdt * 60; u.y += (dy/d) * u.speed * sdt * 60; }
+                    else { 
+                        const wp = getNextWaypoint(u.x, u.y, u.team === 'player', u.currentWaypointIndex); 
+                        if (wp) { 
+                            const wdx = wp.x - u.x, wdy = wp.y - u.y, wd = Math.sqrt(wdx*wdx + wdy*wdy); 
+                            if (wd > 3) { 
+                                u.x += (wdx/wd) * u.speed * sdt * 60; 
+                                u.y += (wdy/wd) * u.speed * sdt * 60; 
+                                // Update waypoint index when close to current target
+                                if (wd < 10) {
+                                    u.currentWaypointIndex = u.team === 'player' ? u.currentWaypointIndex + 1 : u.currentWaypointIndex - 1;
+                                }
+                            } 
+                        } 
+                    }
+                } else { const now = performance.now(); if ((now - u.lastAttackTime) / 1000 >= u.cooldown / gameSpeed) { fireWeapon(u, hostile); u.lastAttackTime = now; } }
+            } else {
+                const targetX = u.team === 'player' ? cw - 10 : 10, targetY = u.team === 'player' ? 10 : ch - 10;
+                const dx = targetX - u.x, dy = targetY - u.y, d = Math.sqrt(dx*dx + dy*dy);
+                if (d > 15) {
+                    if (u.flying) { u.x += (dx/d) * u.speed * sdt * 60; u.y += (dy/d) * u.speed * sdt * 60; }
+                    else { 
+                        const wp = getNextWaypoint(u.x, u.y, u.team === 'player', u.currentWaypointIndex); 
+                        if (wp) { 
+                            const wdx = wp.x - u.x, wdy = wp.y - u.y, wd = Math.sqrt(wdx*wdx + wdy*wdy); 
+                            if (wd > 3) { 
+                                u.x += (wdx/wd) * u.speed * sdt * 60; 
+                                u.y += (wdy/wd) * u.speed * sdt * 60; 
+                                // Update waypoint index when close to current target
+                                if (wd < 10) {
+                                    u.currentWaypointIndex = u.team === 'player' ? u.currentWaypointIndex + 1 : u.currentWaypointIndex - 1;
+                                }
+                            } 
+                        } 
+                    }
+                } else { damageBase(u.team === 'player' ? 'enemy' : 'player', u.isThor ? 25 : 8); u.hp = 0; }
+            }
+            u.x = Math.max(u.radius, Math.min(cw - u.radius, u.x));
+            u.y = Math.max(u.radius, Math.min(ch - u.radius, u.y));
+        });
+        for (let i = units.length - 1; i >= 0; i--) { if (units[i].hp <= 0) { if (units[i].isThor) { thorActive = false; updateManaSkills(); addLog("⚡ Thor destroyed!"); } createExplosion(units[i].x, units[i].y, units[i].color, 8); units.splice(i, 1); } }
+        for (let i = particles.length - 1; i >= 0; i--) { const p = particles[i]; p.x += p.vx * sdt * 60; p.y += p.vy * sdt * 60; p.alpha -= p.decay * sdt * 60; if (p.alpha <= 0) particles.splice(i, 1); }
+    }
+
+    function createExplosion(x, y, color, count) {
+        if (count === undefined) count = 10;
+        for (let i = 0; i < count; i++) {
+            const ang = Math.random() * Math.PI * 2;
+            const speed = 1 + Math.random() * 3.5;
+            particles.push({ x, y, vx: Math.cos(ang) * speed, vy: Math.sin(ang) * speed, radius: 1.5 + Math.random() * 2, color: color, alpha: 1, decay: 0.02 + Math.random() * 0.03 });
+        }
+    }
+
+    // ============================================================
+    // 9. MANA SKILLS
+    // ============================================================
+    function addMana(amount) { manaProgress = Math.min(100, manaProgress + amount); updateHUD(); updateManaSkills(); }
+
+    function updateManaSkills() {
+        ['shield', 'nuke', 'thor'].forEach((id, i) => {
+            const costs = [33, 66, 100];
+            const btn = document.getElementById('skill-' + id);
+            const ready = manaProgress >= costs[i];
+            btn.disabled = !ready;
+            const colors = [{b:'cyan'},{b:'orange'},{b:'purple'}];
+            const c = colors[i];
+            btn.className = `mana-btn flex items-center justify-center gap-1 p-1 rounded-lg text-[8px] font-bold ${ready ? `bg-${c.b}-700/60 border-${c.b}-400/60 text-${c.b}-200 cursor-pointer ${i===2?'animate-pulse':''}` : `bg-${c.b}-900/40 border-${c.b}-700/30 text-${c.b}-300/40`}`;
+        });
+    }
+
+    function activateShield() {
+        if (manaProgress < 33 || shieldActive) return;
+        manaProgress -= 33; shieldActive = true; shieldTimer = 4;
+        units.forEach(u => { if (u.team === 'player') { u.shielded = true; u.shieldHP = u.maxHp * 0.5; } });
+        addLog("🛡️ Shield activated!"); triggerBanner("Shield active!"); updateHUD(); updateManaSkills();
+    }
+
+    function activateNuke() {
+        if (manaProgress < 66) return;
+        manaProgress -= 66;
+        createExplosion(cw/2, ch/2, '#f97316', 40); createExplosion(cw/2, ch/2, '#ef4444', 30);
+        let destroyed = 0;
+        for (let i = units.length - 1; i >= 0; i--) {
+            const u = units[i];
+            if (u.team === 'enemy') {
+                const d = Math.sqrt((u.x - cw/2)**2 + (u.y - ch/2)**2);
+                if (d <= 130) { if (u.flying || u.type === 5) continue; if (u.type === 4 && Math.random() > 0.5) continue; createExplosion(u.x, u.y, '#f97316', 12); units.splice(i, 1); destroyed++; }
+            }
+        }
+        addLog(`💥 Nuke! ${destroyed} enemies destroyed.`); triggerBanner(`Nuke: ${destroyed} killed!`); updateHUD(); updateManaSkills();
+    }
+
+    function summonThor() {
+        if (thorActive || manaProgress < 100) return;
+        thorActive = true; manaProgress = 0;
+        ctx.fillStyle = 'rgba(168, 85, 247, 0.3)'; ctx.fillRect(0, 0, cw, ch);
+        spawnUnitSquad('player', 5, 1);
+        addLog("⚡ THOR SUMMONED!"); triggerBanner("⚡ THOR MARCHES!"); updateHUD(); updateManaSkills();
+    }
+
+    // ============================================================
+    // 10. RENDERER
+    // ============================================================
+    function drawBattlefield() {
+        ctx.clearRect(0, 0, cw, ch);
+        ctx.fillStyle = '#0f172a'; ctx.fillRect(0, 0, cw, ch);
+        if (roadPath.length >= 2) {
+            ctx.beginPath(); ctx.moveTo(roadPath[0].x, roadPath[0].y);
+            for (let i = 1; i < roadPath.length; i++) ctx.lineTo(roadPath[i].x, roadPath[i].y);
+            ctx.strokeStyle = '#1a2035'; ctx.lineWidth = 18; ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.stroke();
+            ctx.strokeStyle = '#2a3a5c'; ctx.lineWidth = 1; ctx.stroke();
+            ctx.strokeStyle = 'rgba(100,116,139,0.25)'; ctx.lineWidth = 0.7; ctx.setLineDash([5, 10]);
+            ctx.beginPath(); ctx.moveTo(roadPath[0].x, roadPath[0].y);
+            for (let i = 1; i < roadPath.length; i++) ctx.lineTo(roadPath[i].x, roadPath[i].y); ctx.stroke(); ctx.setLineDash([]);
+        }
+        ctx.fillStyle = 'rgba(56,189,248,0.12)'; ctx.fillRect(0, ch - 28, 28, 28);
+        ctx.fillStyle = 'rgba(244,63,94,0.12)'; ctx.fillRect(cw - 28, 0, 28, 28);
+        ctx.strokeStyle = '#38bdf8'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(10, ch - 10, 7, 0, Math.PI * 2); ctx.stroke();
+        ctx.fillStyle = 'rgba(56,189,248,0.15)'; ctx.fill(); ctx.fillStyle = 'rgba(56,189,248,0.5)'; ctx.font = '5px sans-serif'; ctx.textAlign = 'center'; ctx.fillText('P', 10, ch - 20);
+        ctx.strokeStyle = '#f43f5e'; ctx.beginPath(); ctx.arc(cw - 10, 10, 7, 0, Math.PI * 2); ctx.stroke();
+        ctx.fillStyle = 'rgba(244,63,94,0.15)'; ctx.fill(); ctx.fillStyle = 'rgba(244,63,94,0.5)'; ctx.fillText('E', cw - 10, 20);
+        ctx.fillStyle = '#ef4444'; ctx.fillRect(3, ch - 4, 22, 2.5); ctx.fillStyle = '#22c55e'; ctx.fillRect(3, ch - 4, 22 * (playerBaseHP / MAX_BASE_HP), 2.5);
+        ctx.fillStyle = '#ef4444'; ctx.fillRect(cw - 25, 3, 22, 2.5); ctx.fillStyle = '#22c55e'; ctx.fillRect(cw - 25, 3, 22 * (enemyBaseHP / MAX_BASE_HP), 2.5);
+        projectiles.forEach(p => { ctx.beginPath(); ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2); ctx.fillStyle = p.color; ctx.shadowBlur = 6; ctx.shadowColor = p.color; ctx.fill(); ctx.shadowBlur = 0; });
+        particles.forEach(p => { ctx.save(); ctx.globalAlpha = p.alpha; ctx.fillStyle = p.color; ctx.beginPath(); ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2); ctx.fill(); ctx.restore(); });
+        units.forEach(u => {
+            if (u.flying) { ctx.beginPath(); ctx.ellipse(u.x, u.y + 10, u.radius - 2, 2, 0, 0, Math.PI * 2); ctx.fillStyle = 'rgba(0,0,0,0.4)'; ctx.fill(); }
+            if (u.shielded) { ctx.beginPath(); ctx.arc(u.x, u.y, u.radius + 4, 0, Math.PI * 2); ctx.strokeStyle = 'rgba(56,189,248,0.6)'; ctx.lineWidth = 2; ctx.stroke(); ctx.fillStyle = 'rgba(56,189,248,0.1)'; ctx.fill(); }
+            // Draw team indicator ring
+            ctx.beginPath(); ctx.arc(u.x, u.y, u.radius + 2, 0, Math.PI * 2); ctx.strokeStyle = u.team === 'player' ? 'rgba(56,189,248,0.8)' : 'rgba(244,63,94,0.8)'; ctx.lineWidth = 2; ctx.stroke();
+            ctx.beginPath(); ctx.arc(u.x, u.y, u.radius, 0, Math.PI * 2); ctx.fillStyle = u.color; ctx.strokeStyle = '#020617'; ctx.lineWidth = 1.5; ctx.fill(); ctx.stroke();
+            ctx.font = `${u.radius + 2}px sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = '#fff'; ctx.fillText(u.symbol, u.x, u.y);
+            if (u.hp < u.maxHp || u.shielded) { const bw = u.radius * 2, bh = 2.5, bx = u.x - u.radius, by = u.y - u.radius - 7; ctx.fillStyle = '#ef4444'; ctx.fillRect(bx, by, bw, bh); if (u.shielded) { ctx.fillStyle = '#38bdf8'; ctx.fillRect(bx, by - 2.5, bw * Math.max(0, u.shieldHP / (u.maxHp * 0.5)), 1.5); } ctx.fillStyle = '#22c55e'; ctx.fillRect(bx, by, bw * Math.max(0, u.hp / u.maxHp), bh); }
+        });
+        spawnAlerts.forEach(a => { ctx.save(); ctx.globalAlpha = a.alpha; ctx.fillStyle = 'rgba(15,23,42,0.85)'; ctx.fillRect(a.x - 28, a.y - 9, 56, 13); ctx.strokeStyle = a.color; ctx.strokeRect(a.x - 28, a.y - 9, 56, 13); ctx.fillStyle = a.color; ctx.font = 'bold 9px sans-serif'; ctx.textAlign = 'center'; ctx.fillText(a.text, a.x, a.y); ctx.restore(); });
+        airshipDropQueue.forEach(drop => { const prog = (2.5 - drop.delayTimer) / 2.5; const sx = -80 + (cw + 160) * prog; ctx.beginPath(); ctx.ellipse(sx, 20, 24, 10, 0, 0, Math.PI * 2); ctx.fillStyle = 'rgba(15,23,42,0.45)'; ctx.fill(); });
+    }
+
+    // ============================================================
+    // 11. HUD
+    // ============================================================
+    function updateHUD() {
+        document.getElementById('score-display').innerText = gameScore;
+        document.getElementById('mana-text').innerText = `${Math.floor(manaProgress)} / 100`;
+        document.getElementById('mana-bar-fill').style.width = `${manaProgress}%`;
+    }
+
+    function addScore(amount) { gameScore += amount; updateHUD(); }
+
+    function addLog(text) {
+        const log = document.getElementById('combat-logger');
+        const entry = document.createElement('div');
+        entry.className = "text-slate-300 py-0.5 border-b border-slate-900/40 text-[9px]";
+        entry.innerHTML = `<span class="text-amber-500 font-mono">[${new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit',second:'2-digit'})}]</span> ${text}`;
+        log.appendChild(entry); log.scrollTop = log.scrollHeight;
+    }
+
+    function triggerBanner(msg) { const b = document.getElementById('status-banner'); b.innerText = msg; b.classList.remove('hidden'); setTimeout(() => b.classList.add('hidden'), 3000); }
+    function toggleHelp(show) { document.getElementById('help-modal').classList.toggle('hidden', !show); }
+
+    function triggerGameOver(won) {
+        gameActive = false;
+        document.getElementById('gameover-icon').innerText = won ? '🏆' : '💥';
+        document.getElementById('gameover-title').innerText = won ? 'VICTORY' : 'DEFEAT';
+        document.getElementById('gameover-title').className = `text-2xl font-black ${won ? 'text-amber-400' : 'text-red-500'} uppercase tracking-widest`;
+        document.getElementById('gameover-subtitle').innerText = won ? 'You routed the enemy!' : 'Your HQ was overrun!';
+        document.getElementById('stat-score').innerText = gameScore;
+        document.getElementById('stat-spawned').innerText = totalUnitsSpawned;
+        document.getElementById('stat-combos').innerText = maxComboReached;
+        document.getElementById('gameover-modal').classList.remove('hidden');
+    }
+
+    function resetGame() { initGame(); }
+
+    function toggleEnemyBoard() {
+        enemyBoardMinimized = !enemyBoardMinimized;
+        const grid = document.getElementById('enemy-match3-grid');
+        const btn = document.getElementById('minimize-enemy-btn');
+        const icon = btn.querySelector('i');
+        
+        if (enemyBoardMinimized) {
+            grid.style.maxWidth = '100%';
+            grid.style.padding = '0px';
+            grid.style.opacity = '1';
+            grid.className = 'grid grid-cols-8 gap-0 w-full bg-slate-900/50 p-0 rounded-lg border border-slate-800/50 transition-all duration-300';
+            grid.style.maxHeight = '20px';
+            grid.style.overflow = 'hidden';
+            icon.className = 'fa-solid fa-chevron-down';
+        } else {
+            grid.style.maxWidth = '370px';
+            grid.style.padding = '4px';
+            grid.style.opacity = '1';
+            grid.className = 'grid grid-cols-8 gap-0.5 w-full max-w-[370px] bg-slate-900/50 p-1 rounded-lg border border-slate-800/50 transition-all duration-300';
+            grid.style.maxHeight = 'none';
+            grid.style.overflow = 'visible';
+            icon.className = 'fa-solid fa-chevron-up';
+        }
+    }
+
+    // ============================================================
+    // 12. INIT & GAME LOOP
+    // ============================================================
+    window.addEventListener('load', () => {
+        initGame();
+        document.getElementById('speed-btn').addEventListener('click', () => { gameSpeed = gameSpeed === 1 ? 2 : gameSpeed === 2 ? 4 : 1; document.getElementById('speed-text').innerText = gameSpeed + 'x'; });
+        document.getElementById('help-btn').addEventListener('click', () => toggleHelp(true));
+        document.getElementById('skill-shield').addEventListener('click', activateShield);
+        document.getElementById('skill-nuke').addEventListener('click', activateNuke);
+        document.getElementById('skill-thor').addEventListener('click', summonThor);
+        document.getElementById('minimize-enemy-btn').addEventListener('click', toggleEnemyBoard);
+        document.getElementById('autoplay-btn').addEventListener('click', () => {
+            playerAutoPlay = !playerAutoPlay;
+            const btn = document.getElementById('autoplay-btn');
+            if (playerAutoPlay) {
+                btn.innerHTML = '<i class="fa-solid fa-pause"></i> Auto';
+                btn.classList.add('text-green-400');
+                btn.classList.remove('text-slate-400');
+            } else {
+                btn.innerHTML = '<i class="fa-solid fa-play"></i> Auto';
+                btn.classList.remove('text-green-400');
+                btn.classList.add('text-slate-400');
+            }
+        });
+        setupDragControls();
     });
 
-    // Audio toggles
-    setupAudioToggle('solo-audio-toggle');
-    setupAudioToggle('vs-audio-toggle');
-    document.getElementById('solo-high').textContent = highScore;
+    function initGame() {
+        canvas = document.getElementById('battle-canvas');
+        ctx = canvas.getContext('2d');
+        resizeCanvas();
+        createPlayerBoard(); renderPlayerBoard();
+        createEnemyBoard(); renderEnemyBoard();
+        playerBaseHP = MAX_BASE_HP; enemyBaseHP = MAX_BASE_HP;
+        gameScore = 0; totalUnitsSpawned = 0; maxComboReached = 0; manaProgress = 0;
+        units = []; projectiles = []; airshipDropQueue = []; particles = []; spawnAlerts = [];
+        thorActive = false; shieldActive = false; shieldTimer = 0; aiMatchTimer = 0;
+        gameActive = true; selectedTile = null; isProcessingMatch = false;
+        updateHUD(); updateManaSkills();
+        document.getElementById('gameover-modal').classList.add('hidden');
+        lastTime = performance.now();
+        requestAnimationFrame(gameLoop);
+        addLog("MatchCraft v2.0 — Match tiles to spawn units! Purple fills Mana.");
+    }
 
-    // Show mode screen initially
-    showScreen('mode-screen');
-  </script>
+    function resizeCanvas() {
+        const container = canvas.parentElement;
+        canvas.width = container.clientWidth;
+        canvas.height = container.clientHeight;
+        cw = canvas.width; ch = canvas.height;
+        if (cw > 0 && ch > 0) buildRoadPath();
+    }
+    window.addEventListener('resize', resizeCanvas);
+
+    function gameLoop(timestamp) {
+        if (!gameActive) return;
+        const dt = Math.min(0.1, (timestamp - lastTime) / 1000);
+        lastTime = timestamp;
+        updateBattlefield(dt);
+        drawBattlefield();
+        // Auto-play for player if enabled
+        if (playerAutoPlay && !isProcessingMatch) {
+            autoPlayPlayer();
+        }
+        requestAnimationFrame(gameLoop);
+    }
+    </script>
 </body>
 </html>
